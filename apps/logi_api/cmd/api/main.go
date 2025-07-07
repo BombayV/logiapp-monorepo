@@ -11,7 +11,7 @@ import (
 
 func main() {
 	// Load application configuration
-	cfg, err := config.LoadConfig(".") // Load from the root directory
+	cfg, err := config.LoadConfig()
 	if err != nil {
 		log.Fatalf("could not load config: %v", err)
 	}
@@ -32,7 +32,7 @@ func main() {
 	fmt.Println("Starting server on port", cfg.ServerPort)
 
 	// Setup router
-	router := api.SetupRouter(db, redisCache)
+	router := api.SetupRouter(db, redisCache, cfg)
 
 	// Start server
 	// The address is formatted as ":<port>"

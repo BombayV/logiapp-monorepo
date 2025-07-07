@@ -1,33 +1,32 @@
 package config
 
 import (
-	"github.com/spf13/viper"
+	"fmt"
+	"os"
+
+	"github.com/joho/godotenv"
 )
 
 // Config stores all configuration of the application.
-// The values are read by viper from a config file or environment variables.
+// The values are read from environment variables.
 type Config struct {
-	ServerPort   string `mapstructure:"SERVER_PORT"`
-	DBSource     string `mapstructure:"DB_SOURCE"`
-	RedisAddress string `mapstructure:"REDIS_ADDRESS"`
+	ServerPort   string
+	DBSource     string
+	RedisAddress string
+	GinMode      string
+	TrustedProxy string
 }
 
-// LoadConfig reads configuration from file or environment variables.
-func LoadConfig(path string) (config Config, err error) {
-	viper.AddConfigPath(path)
-	viper.SetConfigName(".env")
-	viper.SetConfigType("env")
-
-	viper.AutomaticEnv()
-
-	err = viper.ReadInConfig()
-	if err != nil {
-		// It's okay if the config file is not found, we can rely on env vars.
-		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-			return
-		}
+// LoadConfig reads configuration from environment variables.
+func LoadConfig() (config Config, err error) {
+	if err := godotenv.Load(); err != nil {
+		return config, fmt.Errorf("error loading .env file: %w", err)
 	}
 
-	err = viper.Unmarshal(&config)
-	return
+	config.ServerPort = os.Getenv("SERVER_PORT")
+	config.DBSource = os.Getenv("DB_SOURCE")
+	config.RedisAddress = os.Getenv("REDIS_ADDRESS")
+	config.GinMode = os.Getenv("GIN_MODE")
+	config.TrustedProxy = os.Getenv("TRUSTED_PROXY")
+	return config, nil
 }

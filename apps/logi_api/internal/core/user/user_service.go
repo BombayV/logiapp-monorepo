@@ -1,5 +1,7 @@
 package user
 
+import "time"
+
 // UserService would typically have a dependency on a repository or storage interface.
 // type service struct {
 // 	userRepo UserRepository
