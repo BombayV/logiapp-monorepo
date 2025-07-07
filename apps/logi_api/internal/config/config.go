@@ -19,8 +19,14 @@ type Config struct {
 
 // LoadConfig reads configuration from environment variables.
 func LoadConfig() (config Config, err error) {
-	if err := godotenv.Load(); err != nil {
-		return config, fmt.Errorf("error loading .env file: %w", err)
+	loadedConfig, err := godotenv.Read(".env")
+	if err != nil && loadedConfig == nil {
+		fmt.Println("No .env file found, using environment variables")
+	} else {
+		err := godotenv.Load()
+		if err != nil {
+			return config, fmt.Errorf("error loading .env file: %w", err)
+		}
 	}
 
 	config.ServerPort = os.Getenv("SERVER_PORT")
