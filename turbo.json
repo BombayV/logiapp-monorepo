@@ -3,9 +3,9 @@
   "pipeline": {
     "build": {
       "outputs": [
-        "apps/api-go/dist/**",
-        "apps/mobile-flutter/build/**",
-        "apps/web-nextjs/.next/**"
+        "apps/logi_api/dist/**",
+        "apps/logi_app/build/**",
+        "apps/logi_web/.next/**"
       ]
     },
     "lint": {},
@@ -13,5 +13,7 @@
       "cache": false,
       "persistent": true
     }
-  }
+  },
+  "extends": [],
+  "tasks": {}
 }
