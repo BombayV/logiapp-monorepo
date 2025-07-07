@@ -2,16 +2,22 @@
   "name": "ev-logiapp-monorepo",
   "type": "module",
   "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
   "scripts": {
-    "dev": "turbo run dev",
-    "build": "turbo run build",
-    "lint": "turbo run lint"
+    "dev:ios": "turbo dev:ios --filter=logi_api --filter=logi_app",
+    "dev:android": "turbo dev:android --filter=logi_api --filter=logi_app",
+    "dev:web": "turbo dev --filter=logi_api --filter=logi_web",
+    "build": "turbo build",
+    "lint": "turbo lint"
   },
   "devDependencies": {
     "@types/bun": "latest",
-    "turbo": "^2.5.4"
+    "turbo": "latest"
   },
   "peerDependencies": {
     "typescript": "^5"
-  }
+  },
+  "packageManager": "bun@1.2.18"
 }

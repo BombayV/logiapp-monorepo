@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "description": "API for Logi application",
   "scripts": {
-    "dev": "go run .",
+    "dev": "go run ./cmd/api/main.go",
+    "dev:ios": "go run ./cmd/api/main.go",
+    "dev:android": "go run ./cmd/api/main.go",
     "build": "go build -v -o dist/server ."
   }
 }

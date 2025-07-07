@@ -2,7 +2,10 @@
   "name": "logi_app",
   "scripts": {
     "dev": "flutter run",
-    "build": "flutter build apk",
+    "dev:ios": "open -a Simulator && flutter run",
+    "dev:android": "flutter run --no-sound-null-safety",
+    "build:ios": "flutter build ios",
+    "build:android": "flutter build apk",
     "lint": "flutter analyze"
   }
 }
