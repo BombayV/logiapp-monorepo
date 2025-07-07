@@ -1,0 +1,17 @@
+{
+  "name": "ev-logiapp-monorepo",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "turbo": "^2.5.4"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}

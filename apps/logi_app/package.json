@@ -1,0 +1,8 @@
+{
+  "name": "logi_app",
+  "scripts": {
+    "dev": "flutter run",
+    "build": "flutter build apk",
+    "lint": "flutter analyze"
+  }
+}

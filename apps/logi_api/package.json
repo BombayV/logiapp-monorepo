@@ -1,0 +1,9 @@
+{
+  "name": "logi_api",
+  "version": "1.0.0",
+  "description": "API for Logi application",
+  "scripts": {
+    "dev": "go run .",
+    "build": "go build -v -o dist/server ."
+  }
+}
