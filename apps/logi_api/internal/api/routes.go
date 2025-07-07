@@ -38,6 +38,7 @@ func SetupRouter(db *database.DB, redisCache *cache.Cache, cfg config.Config) *g
 	{
 		// User routes
 		userRoutes := v1.Group("/users")
+		userRoutes.Use(middleware.AuthMiddleware([]string{})) // Allow public access for registration and login
 		{
 			// Public routes
 			userRoutes.POST("/register", handlers.RegisterUser(db))
@@ -47,7 +48,7 @@ func SetupRouter(db *database.DB, redisCache *cache.Cache, cfg config.Config) *g
 		// Product routes
 		productRoutes := v1.Group("/products")
 		// Apply auth middleware to all product routes
-		productRoutes.Use(middleware.AuthMiddleware())
+		productRoutes.Use(middleware.AuthMiddleware([]string{"user"}))
 		{
 			productRoutes.GET("", handlers.GetProducts(db, redisCache))
 			productRoutes.GET("/:id", handlers.GetProductByID(db, redisCache))

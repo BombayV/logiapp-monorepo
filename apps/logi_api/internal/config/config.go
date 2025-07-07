@@ -15,7 +15,11 @@ type Config struct {
 	RedisAddress string
 	GinMode      string
 	TrustedProxy string
+	JWTSecret    string
 }
+
+// AppConfig LoadConfig reads configuration from environment variables.
+var AppConfig Config
 
 // LoadConfig reads configuration from environment variables.
 func LoadConfig() (config Config, err error) {
@@ -34,5 +38,7 @@ func LoadConfig() (config Config, err error) {
 	config.RedisAddress = os.Getenv("REDIS_ADDRESS")
 	config.GinMode = os.Getenv("GIN_MODE")
 	config.TrustedProxy = os.Getenv("TRUSTED_PROXY")
+	config.JWTSecret = os.Getenv("JWT_SECRET")
+	AppConfig = config // Set the global AppConfig
 	return config, nil
 }

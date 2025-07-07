@@ -10,6 +10,7 @@ import (
 // RegisterUser handles new user registration.
 func RegisterUser(db *database.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
+
 		// In a real app, you would:
 		// 1. Bind the request body to a user struct.
 		// 2. Validate the input.

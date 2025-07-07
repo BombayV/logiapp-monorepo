@@ -35,7 +35,6 @@ func main() {
 	router := api.SetupRouter(db, redisCache, cfg)
 
 	// Start server
-	// The address is formatted as ":<port>"
 	err = router.Run(":" + cfg.ServerPort)
 	if err != nil {
 		log.Fatalf("failed to run server: %v", err)
