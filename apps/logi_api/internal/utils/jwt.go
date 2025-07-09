@@ -1,4 +1,4 @@
-package core
+package utils
 
 import (
 	"bombayv/logiapp-monorepo/logi_api/internal/config"
@@ -39,7 +39,7 @@ func GenerateJWT(userID, role string) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
 	// Sign the token with our secret key to get the complete, signed token string.
-	tokenString, err := token.SignedString([]byte(config.AppConfig.JWTSecret))
+	tokenString, err := token.SignedString([]byte(config.App.JWTSecret))
 	if err != nil {
 		return "", fmt.Errorf("error signing token: %w", err)
 	}
@@ -62,7 +62,7 @@ func ValidateJWT(tokenString string) (*Claims, error) {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
 		// return the secret key
-		return []byte(config.AppConfig.JWTSecret), nil
+		return []byte(config.App.JWTSecret), nil
 	})
 
 	if err != nil {

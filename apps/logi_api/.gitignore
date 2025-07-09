@@ -2,3 +2,5 @@
 .vscode/
 
 *.sql
+.air.toml
+tmp/

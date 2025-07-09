@@ -20,7 +20,7 @@ func AuthMiddleware(role []string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		tokenString := c.GetHeader("Authorization")
 		if tokenString == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header required"})
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized: no token provided"})
 			c.Abort()
 			return
 		}
@@ -29,7 +29,7 @@ func AuthMiddleware(role []string) gin.HandlerFunc {
 		tokenString = tokenString[len("Bearer "):]
 
 		token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
-			return []byte(config.AppConfig.JWTSecret), nil
+			return []byte(config.App.JWTSecret), nil
 		})
 
 		if err != nil {
