@@ -1,4 +1,4 @@
-module entityevolution/ev-logiapp-monorepo/logi_api
+module bombayv/logiapp-monorepo/logi_api
 
 go 1.23.0
 

@@ -1,7 +1,7 @@
 package core
 
 import (
-	"entityevolution/ev-logiapp-monorepo/logi_api/internal/config"
+	"bombayv/logiapp-monorepo/logi_api/internal/config"
 	"fmt"
 	"time"
 

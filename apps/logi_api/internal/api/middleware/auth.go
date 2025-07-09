@@ -1,11 +1,12 @@
 package middleware
 
 import (
-	"entityevolution/ev-logiapp-monorepo/logi_api/internal/config"
-	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
+	"bombayv/logiapp-monorepo/logi_api/internal/config"
 	"net/http"
 	"slices"
+
+	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 type Claims struct {

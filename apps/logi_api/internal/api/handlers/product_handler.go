@@ -1,8 +1,8 @@
 package handlers
 
 import (
-	"entityevolution/ev-logiapp-monorepo/logi_api/internal/storage/cache"
-	"entityevolution/ev-logiapp-monorepo/logi_api/internal/storage/database"
+	"bombayv/logiapp-monorepo/logi_api/internal/storage/cache"
+	"bombayv/logiapp-monorepo/logi_api/internal/storage/database"
 	"net/http"
 
 	"github.com/gin-gonic/gin"

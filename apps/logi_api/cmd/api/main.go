@@ -1,10 +1,10 @@
 package main
 
 import (
-	"entityevolution/ev-logiapp-monorepo/logi_api/internal/api"
-	"entityevolution/ev-logiapp-monorepo/logi_api/internal/config"
-	"entityevolution/ev-logiapp-monorepo/logi_api/internal/storage/cache"
-	"entityevolution/ev-logiapp-monorepo/logi_api/internal/storage/database"
+	"bombayv/logiapp-monorepo/logi_api/internal/api"
+	"bombayv/logiapp-monorepo/logi_api/internal/config"
+	"bombayv/logiapp-monorepo/logi_api/internal/storage/cache"
+	"bombayv/logiapp-monorepo/logi_api/internal/storage/database"
 	"fmt"
 	"log"
 )

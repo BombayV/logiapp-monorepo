@@ -1,9 +1,5 @@
 package user
 
-import (
-	"time"
-)
-
 // CreateUser handles the business logic for creating a new user.
 func CreateUser(email, password string) (*User, error) {
 	// 1. Validate email and password strength.

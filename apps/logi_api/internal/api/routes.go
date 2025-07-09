@@ -1,11 +1,11 @@
 package api
 
 import (
-	"entityevolution/ev-logiapp-monorepo/logi_api/internal/api/handlers"
-	"entityevolution/ev-logiapp-monorepo/logi_api/internal/api/middleware"
-	"entityevolution/ev-logiapp-monorepo/logi_api/internal/config"
-	"entityevolution/ev-logiapp-monorepo/logi_api/internal/storage/cache"
-	"entityevolution/ev-logiapp-monorepo/logi_api/internal/storage/database"
+	"bombayv/logiapp-monorepo/logi_api/internal/api/handlers"
+	"bombayv/logiapp-monorepo/logi_api/internal/api/middleware"
+	"bombayv/logiapp-monorepo/logi_api/internal/config"
+	"bombayv/logiapp-monorepo/logi_api/internal/storage/cache"
+	"bombayv/logiapp-monorepo/logi_api/internal/storage/database"
 	"log"
 	"time"
 
