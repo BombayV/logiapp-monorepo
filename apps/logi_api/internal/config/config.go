@@ -15,24 +15,31 @@ type Config struct {
 	RedisAddress string
 	GinMode      string
 	TrustedProxy string
+	JWTSecret    string
 }
 
+// AppConfig LoadConfig reads configuration from environment variables.
+var App Config
+
 // LoadConfig reads configuration from environment variables.
-func LoadConfig() (config Config, err error) {
+func LoadConfig() (err error) {
 	_, err = godotenv.Read(".env")
 	if err != nil {
 		fmt.Println("No .env file found, using environment variables")
 	} else {
 		err := godotenv.Load()
 		if err != nil {
-			return config, fmt.Errorf("error loading .env file: %w", err)
+			return fmt.Errorf("error loading .env file: %w", err)
 		}
 	}
 
-	config.ServerPort = os.Getenv("SERVER_PORT")
-	config.DBSource = os.Getenv("DB_SOURCE")
-	config.RedisAddress = os.Getenv("REDIS_ADDRESS")
-	config.GinMode = os.Getenv("GIN_MODE")
-	config.TrustedProxy = os.Getenv("TRUSTED_PROXY")
-	return config, nil
+	App = Config{
+		ServerPort:   os.Getenv("SERVER_PORT"),
+		DBSource:     os.Getenv("DB_SOURCE"),
+		RedisAddress: os.Getenv("REDIS_ADDRESS"),
+		GinMode:      os.Getenv("GIN_MODE"),
+		TrustedProxy: os.Getenv("TRUSTED_PROXY"),
+		JWTSecret:    os.Getenv("JWT_SECRET"),
+	}
+	return nil
 }

@@ -22,18 +22,22 @@ func NewCache(address string) (*Cache, error) {
 
 	password, _ := u.User.Password()
 
-	// For production, you should load your CA certificate and potentially client certificates.
-	tlsConfig := &tls.Config{
-		InsecureSkipVerify: true, // Set to false in production and provide a RootCA
+	// Build the client options
+	opts := valkey.ClientOption{
+		InitAddress: []string{u.Host},
+		Username:    u.User.Username(),
+		Password:    password,
 	}
 
-	client, err := valkey.NewClient(valkey.ClientOption{
-		InitAddress:      []string{u.Host},
-		Username:         u.User.Username(),
-		Password:         password,
-		TLSConfig:        tlsConfig,
-		
-	})
+	// --- SOLUTION: Only enable TLS for "rediss://" scheme ---
+	if u.Scheme == "rediss" {
+		opts.TLSConfig = &tls.Config{
+			InsecureSkipVerify: true, // Should be false in production with a proper RootCA
+		}
+	}
+
+	// Create the client with the appropriate options
+	client, err := valkey.NewClient(opts)
 	if err != nil {
 		return nil, err
 	}

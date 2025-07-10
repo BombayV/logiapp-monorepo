@@ -1,11 +1,11 @@
 package api
 
 import (
-	"entityevolution/ev-logiapp-monorepo/logi_api/internal/api/handlers"
-	"entityevolution/ev-logiapp-monorepo/logi_api/internal/api/middleware"
-	"entityevolution/ev-logiapp-monorepo/logi_api/internal/config"
-	"entityevolution/ev-logiapp-monorepo/logi_api/internal/storage/cache"
-	"entityevolution/ev-logiapp-monorepo/logi_api/internal/storage/database"
+	"bombayv/logiapp-monorepo/logi_api/internal/api/handlers"
+	"bombayv/logiapp-monorepo/logi_api/internal/api/middleware"
+	"bombayv/logiapp-monorepo/logi_api/internal/config"
+	"bombayv/logiapp-monorepo/logi_api/internal/storage/cache"
+	"bombayv/logiapp-monorepo/logi_api/internal/storage/database"
 	"log"
 	"time"
 
@@ -13,45 +13,31 @@ import (
 )
 
 // SetupRouter configures the Gin router with all the necessary routes and middleware.
-func SetupRouter(db *database.DB, redisCache *cache.Cache, cfg config.Config) *gin.Engine {
-	// Creates a gin router with default middleware:
-	// logger and recovery (crash-free) middleware
-	gin.SetMode(cfg.GinMode)
+func SetupRouter(db *database.DB, redisCache *cache.Cache) *gin.Engine {
+	gin.SetMode(config.App.GinMode)
 	router := gin.Default()
-	// Set trusted proxies if configured
-	if cfg.TrustedProxy != "" {
-		err := router.SetTrustedProxies([]string{cfg.TrustedProxy})
+	if config.App.TrustedProxy != "" {
+		err := router.SetTrustedProxies([]string{config.App.TrustedProxy})
 		if err != nil {
 			log.Fatalf("could not set trusted proxies: %v", err)
 			return nil
 		}
 	}
 
-	// Add custom logger middleware
 	router.Use(middleware.RequestLogger(5 * time.Second))
 
-	// Health check route
 	router.GET("/status", handlers.Status)
+	router.GET("/token", handlers.GetToken)
 
 	// API v1 routes
 	v1 := router.Group("/v1")
 	{
-		// User routes
-		userRoutes := v1.Group("/users")
-		{
-			// Public routes
-			userRoutes.POST("/register", handlers.RegisterUser(db))
-			userRoutes.POST("/login", handlers.LoginUser(db))
-		}
+		// Public routes
 
-		// Product routes
-		productRoutes := v1.Group("/products")
-		// Apply auth middleware to all product routes
-		productRoutes.Use(middleware.AuthMiddleware())
-		{
-			productRoutes.GET("", handlers.GetProducts(db, redisCache))
-			productRoutes.GET("/:id", handlers.GetProductByID(db, redisCache))
-		}
+		// User routes (protected)
+		v1.POST("/users/login", handlers.LoginUser)
+		// Apply auth middleware to registration route
+		v1.POST("/users/register", middleware.AuthMiddleware([]string{""}), handlers.RegisterUser)
 	}
 
 	return router
