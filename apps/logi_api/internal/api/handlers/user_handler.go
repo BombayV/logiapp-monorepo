@@ -3,6 +3,7 @@ package handlers
 import (
 	"bombayv/logiapp-monorepo/logi_api/internal/core/user"
 	"bombayv/logiapp-monorepo/logi_api/internal/utils"
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -19,13 +20,22 @@ type RegisterUserRequest struct {
 
 // RegisterUser handles new user registration.
 func RegisterUser(c *gin.Context) {
+	var request RegisterUserRequest
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid request body",
+		})
+		fmt.Println("Error binding request body:", err)
+		return
+	}
+
 	newUser, err := user.CreateUser(
-		c.PostForm("email"),
-		c.PostForm("password"),
-		c.PostForm("first_name"),
-		c.PostForm("last_name"),
-		c.PostForm("phone"),
-		c.PostForm("role"),
+		request.Email,
+		request.Password,
+		request.FirstName,
+		request.LastName,
+		request.Phone,
+		request.Role,
 	)
 
 	if err != nil {

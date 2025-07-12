@@ -10,29 +10,25 @@ import (
 )
 
 var (
-	ErrInvalidCredentials = errors.New("invalid email or password")
+	ErrInvalidCredentials = errors.New("missing or invalid credentials")
+	ErrPasswordTooWeak    = errors.New("password must be at least 8 characters long")
 	ErrForbidden          = errors.New("forbidden: insufficient permissions")
 )
 
 // CreateUser handles the business logic for creating a new user.
 func CreateUser(email, password, firstName, lastName, phone, role string) (*User, error) {
-	fmt.Println("All parameters received in CreateUser:")
-	fmt.Printf("Email: %s, Password: %s, FirstName: %s, LastName: %s, Phone: %s, Role: %s\n",
-		email,
-		password,
-		firstName,
-		lastName,
-		phone,
-		role,
-	)
 	// 2. Validate role
 	if role != "sales" && role != "driver" {
 		return nil, errors.New("invalid role provided: must be 'sales' or 'driver'")
 	}
 
 	// 3. Validate email and password strength.
-	if email == "" || password == "" || len(password) < 8 {
+	if email == "" || password == "" {
 		return nil, ErrInvalidCredentials
+	}
+
+	if len(password) < 8 {
+		return nil, ErrPasswordTooWeak
 	}
 
 	// 4. Hash the password.
@@ -52,6 +48,8 @@ func CreateUser(email, password, firstName, lastName, phone, role string) (*User
 		CreatedAt:    now,
 		UpdatedAt:    now,
 	}
+
+	fmt.Println("User created with password hash:", passwordHash)
 
 	// userData := &UserData{
 	// 	UserID:         userID,
