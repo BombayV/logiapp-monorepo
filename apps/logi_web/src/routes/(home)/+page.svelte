@@ -11,7 +11,7 @@
 		<img src="/favicon/favicon-32x32.png" alt="LogiApp Logo" width={32} height={32} />
 		<h1 class="text-2xl font-bold">LogiApp</h1>
 	</a>
-	<a href="/auth/login">
+	<a href={data.loggedIn ? '/auth/dashboard' : '/auth/login'}>
 		<Button>{data.loggedIn ? 'Dashboard' : 'Iniciar Sesión'}</Button>
 	</a>
 </header>

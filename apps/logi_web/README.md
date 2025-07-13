@@ -35,11 +35,13 @@ bun run cf:dev
 ### Deploy to Cloudflare Pages
 
 1. **First time setup**: Login to Wrangler
+
    ```bash
    bunx wrangler login
    ```
 
 2. **Deploy your application**:
+
    ```bash
    bun run cf:deploy
    ```
@@ -52,6 +54,7 @@ bun run cf:dev
 ### Environment Variables
 
 1. Copy the example environment file:
+
    ```bash
    cp .dev.vars.example .dev.vars
    ```

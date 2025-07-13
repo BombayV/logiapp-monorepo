@@ -1,6 +1,7 @@
 # Cloudflare Deployment Checklist
 
 ## ✅ Setup Complete
+
 - [x] Installed `@sveltejs/adapter-cloudflare`
 - [x] Installed `wrangler` CLI
 - [x] Updated `svelte.config.js` to use Cloudflare adapter
@@ -13,6 +14,7 @@
 ## 🚀 Next Steps for Deployment
 
 ### 1. First Time Setup
+
 ```bash
 # Login to Cloudflare
 bunx wrangler login
@@ -22,12 +24,15 @@ bunx wrangler pages project create logi-web
 ```
 
 ### 2. Environment Variables
+
 Set up production environment variables in Cloudflare Pages dashboard:
+
 - `BACKEND_URL` - Your production API URL
 - `SECRET_KEY` - A secure secret key for production
 - `DATABASE_URL` - Your production database URL (if needed)
 
 ### 3. Deploy
+
 ```bash
 # Build and deploy
 bun run cf:deploy
@@ -38,6 +43,7 @@ bunx wrangler pages deploy .svelte-kit/cloudflare --project-name=logi-web
 ```
 
 ### 4. Local Development
+
 ```bash
 # Regular development
 bun run dev
@@ -48,17 +54,20 @@ bun run cf:dev
 ```
 
 ## 📁 Generated Files
+
 - `.svelte-kit/cloudflare/` - Built application for Cloudflare Pages
 - `_worker.js` - Cloudflare Worker for server-side rendering
 - `_routes.json` - Routing configuration
 - `_headers` - HTTP headers configuration
 
 ## 🔧 Configuration Files
+
 - `wrangler.toml` - Cloudflare configuration
 - `.dev.vars` - Local development environment variables
 - `svelte.config.js` - Updated with Cloudflare adapter
 
 ## 📚 Available Scripts
+
 - `bun run build` - Build for production
 - `bun run cf:dev` - Local Cloudflare development server
 - `bun run cf:deploy` - Build and deploy to Cloudflare Pages
