@@ -15,7 +15,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 		// We have a token, so we need to verify it with the Go backend
 		try {
 			// Send a request to your backend's verification endpoint
-			const response = await fetch(`${BACKEND_URL}/v1/users/me`, {
+			const response = await event.fetch(`${BACKEND_URL}/v1/users/me`, {
 				// Or /verify, /user, etc.
 				headers: {
 					// Send the token in the Authorization header
