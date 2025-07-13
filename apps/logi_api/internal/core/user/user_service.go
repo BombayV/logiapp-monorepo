@@ -79,3 +79,18 @@ func (s *Service) CreateUser(ctx context.Context, email, password, firstName, la
 	// 7. Return the created user.
 	return user, nil
 }
+
+// Login authenticates a user and returns a JWT token if successful.
+func (s *Service) Login(ctx context.Context, email, password string) (string, error) {
+	user, err := s.repo.FindByEmail(ctx, email)
+	if err != nil {
+		return "", ErrInvalidCredentials
+	}
+
+	ok, err := utils.CheckPasswordHash(password, user.PasswordHash)
+	if err != nil || !ok {
+		return "", ErrInvalidCredentials
+	}
+
+	return utils.GenerateJWT(user.UserID, user.Role)
+}
