@@ -1,22 +1,19 @@
-name = "logi-web"
+name = "logiapp"
 compatibility_date = "2025-01-01"
 compatibility_flags = ["nodejs_compat"]
 
 # Cloudflare Pages configuration
 pages_build_output_dir = ".svelte-kit/cloudflare"
 
+# Default environment variables
+[vars]
+BACKEND_URL = "https://spatial-rosmunda-bombay-e0c7d398.koyeb.app"
+
 # Environment variables (add your own as needed)
 [env.production.vars]
-# Add production environment variables here
-# EXAMPLE_VAR = "production_value"
-
-[env.preview.vars]
-# Add preview environment variables here
-# EXAMPLE_VAR = "preview_value"
-
-# Build configuration
-[[env.production.env.vars]]
+BACKEND_URL = "https://spatial-rosmunda-bombay-e0c7d398.koyeb.app"
 NODE_ENV = "production"
 
-[[env.preview.env.vars]]
+[env.preview.vars]
+BACKEND_URL = "https://spatial-rosmunda-bombay-e0c7d398.koyeb.app"
 NODE_ENV = "preview"
