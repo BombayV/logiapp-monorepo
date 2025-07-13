@@ -68,13 +68,29 @@ func (h *UserHandler) RegisterUser(c *gin.Context) {
 }
 
 // LoginUser handles user authentication.
-func LoginUser(c *gin.Context) {
-	// In a real app, you would:
-	// 1. Bind the request body to a login credentials struct.
-	// 2. Validate the credentials with the user service.
-	// 3. If valid, generate a JWT.
-	// 4. Return the token.
-	c.JSON(http.StatusOK, gin.H{"token": "fake-jwt-token-for-testing"})
+func (h *UserHandler) Login(c *gin.Context) {
+	var request struct {
+		Email    string `json:"email" binding:"required,email"`
+		Password string `json:"password" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	token, err := h.UserService.Login(c.Request.Context(), request.Email, request.Password)
+	if err != nil {
+		switch err {
+		case user.ErrInvalidCredentials:
+			c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to login"})
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"token": token})
 }
 
 func GetToken(c *gin.Context) {

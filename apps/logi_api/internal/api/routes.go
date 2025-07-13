@@ -35,9 +35,9 @@ func SetupRouter(db *database.DB, redisCache *cache.Cache, userHandler *handlers
 		// Public routes
 
 		// User routes (protected)
-		v1.POST("/users/login", handlers.LoginUser)
+		v1.POST("/users/login", userHandler.Login)
 		// Apply auth middleware to registration route
-		v1.POST("/users/register", middleware.AuthMiddleware([]string{""}), userHandler.RegisterUser)
+		v1.POST("/users/register", middleware.AuthMiddleware([]string{"admin", "sales"}), userHandler.RegisterUser)
 	}
 
 	return router

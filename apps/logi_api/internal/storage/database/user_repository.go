@@ -43,3 +43,18 @@ func (r *UserRepository) Save(ctx context.Context, u *user.User, ud *user.UserDa
 
 	return tx.Commit(ctx)
 }
+
+// FindByEmail retrieves a user by their email address.
+func (r *UserRepository) FindByEmail(ctx context.Context, email string) (*user.User, error) {
+	query := `
+		SELECT user_id, email, password_hash, role, created_at, updated_at
+		FROM users
+		WHERE email = $1
+	`
+	u := &user.User{}
+	err := r.db.Pool.QueryRow(ctx, query, email).Scan(&u.UserID, &u.Email, &u.PasswordHash, &u.Role, &u.CreatedAt, &u.UpdatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return u, nil
+}
