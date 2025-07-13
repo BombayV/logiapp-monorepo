@@ -25,9 +25,12 @@ func SetupRouter(db *database.DB, redisCache *cache.Cache, userHandler *handlers
 	}
 
 	router.Use(middleware.RequestLogger(5 * time.Second))
+	router.Use(func(c *gin.Context) {
+		c.Set("cache", redisCache)
+		c.Next()
+	})
 
 	router.GET("/status", handlers.Status)
-	router.GET("/token", handlers.GetToken)
 
 	// API v1 routes
 	v1 := router.Group("/v1")
@@ -36,8 +39,14 @@ func SetupRouter(db *database.DB, redisCache *cache.Cache, userHandler *handlers
 
 		// User routes (protected)
 		v1.POST("/users/login", userHandler.Login)
+		v1.POST("/users/logout", middleware.AuthMiddleware([]string{}), userHandler.Logout)
 		// Apply auth middleware to registration route
 		v1.POST("/users/register", middleware.AuthMiddleware([]string{"admin", "sales"}), userHandler.RegisterUser)
+
+		// Test route for revoked tokens
+		v1.GET("/test-revoked-token", middleware.AuthMiddleware([]string{}), func(c *gin.Context) {
+			c.JSON(200, gin.H{"message": "Access granted: Token is valid and not revoked."})
+		})
 	}
 
 	return router

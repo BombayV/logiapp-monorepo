@@ -35,7 +35,7 @@ func main() {
 	userRepo := database.NewUserRepository(db)
 
 	// Initialize services
-	userService := user.NewService(userRepo)
+	userService := user.NewService(userRepo, redisCache)
 
 	// Initialize handlers
 	userHandler := handlers.NewUserHandler(userService)

@@ -3,6 +3,7 @@ package utils
 import (
 	"bombayv/logiapp-monorepo/logi_api/internal/config"
 	"fmt"
+	"github.com/google/uuid"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -32,6 +33,7 @@ func GenerateJWT(userID, role string) (string, error) {
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 			// Issuer of the token.
 			Issuer: "logiapp",
+			ID:     uuid.New().String(),
 		},
 	}
 

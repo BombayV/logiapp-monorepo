@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"bombayv/logiapp-monorepo/logi_api/internal/core/user"
-	"bombayv/logiapp-monorepo/logi_api/internal/utils"
 	"fmt"
 	"net/http"
 
@@ -93,16 +92,17 @@ func (h *UserHandler) Login(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"token": token})
 }
 
-func GetToken(c *gin.Context) {
-	// In a real app, you would generate a JWT token here.
-	// For now, we return a fake token for testing purposes.
-	token, err := utils.GenerateJWT("test-user-id", "admin")
+// Logout handles user logout.
+func (h *UserHandler) Logout(c *gin.Context) {
+	tokenString := c.GetHeader("Authorization")
+	// Remove "Bearer " prefix
+	tokenString = tokenString[len("Bearer "):]
+
+	err := h.UserService.Logout(c.Request.Context(), tokenString)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"token":   token,
-		"message": "Token generated successfully",
-	})
+
+	c.JSON(http.StatusOK, gin.H{"message": "Successfully logged out"})
 }

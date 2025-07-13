@@ -1,9 +1,11 @@
 package cache
 
 import (
+	"context"
 	"crypto/tls"
 	"log"
 	"net/url"
+	"time"
 
 	"github.com/valkey-io/valkey-go"
 )
@@ -49,4 +51,18 @@ func NewCache(address string) (*Cache, error) {
 // Close closes the cache connection.
 func (c *Cache) Close() {
 	c.Client.Close()
+}
+
+// AddRevokedToken adds a token's JTI to the revocation list with an expiration.
+func (c *Cache) AddRevokedToken(ctx context.Context, jti string, expiration time.Duration) error {
+	return c.Client.Do(ctx, c.Client.B().Set().Key(jti).Value("revoked").Ex(expiration).Build()).Error()
+}
+
+// IsTokenRevoked checks if a token's JTI is in the revocation list.
+func (c *Cache) IsTokenRevoked(ctx context.Context, jti string) (bool, error) {
+	exists, err := c.Client.Do(ctx, c.Client.B().Exists().Key(jti).Build()).AsInt64()
+	if err != nil {
+		return false, err
+	}
+	return exists == 1, nil
 }

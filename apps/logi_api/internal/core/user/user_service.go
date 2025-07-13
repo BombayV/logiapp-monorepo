@@ -1,6 +1,7 @@
 package user
 
 import (
+	"bombayv/logiapp-monorepo/logi_api/internal/storage/cache"
 	"bombayv/logiapp-monorepo/logi_api/internal/utils"
 	"context"
 	"errors"
@@ -15,16 +16,18 @@ var (
 	ErrForbidden          = errors.New("forbidden: insufficient permissions")
 	ErrEmailExists        = errors.New("email address is already in use")
 	ErrCouldNotSaveUser   = errors.New("could not save user to the database")
+	ErrInvalidToken       = errors.New("invalid or expired token")
 )
 
 // Service provides user-related operations.
 type Service struct {
-	repo Repository
+	repo  Repository
+	cache *cache.Cache
 }
 
 // NewService creates a new user service.
-func NewService(repo Repository) *Service {
-	return &Service{repo: repo}
+func NewService(repo Repository, cache *cache.Cache) *Service {
+	return &Service{repo: repo, cache: cache}
 }
 
 // CreateUser handles the business logic for creating a new user.
@@ -93,4 +96,26 @@ func (s *Service) Login(ctx context.Context, email, password string) (string, er
 	}
 
 	return utils.GenerateJWT(user.UserID, user.Role)
+}
+
+// Logout revokes a user's JWT token.
+func (s *Service) Logout(ctx context.Context, tokenString string) error {
+	claims, err := utils.ValidateJWT(tokenString)
+	if err != nil {
+		return ErrInvalidToken
+	}
+
+	// Add the token's JTI to the revocation list in Redis.
+	// The token is stored until its original expiration time.
+	expiresAt := claims.ExpiresAt.Time
+	if time.Now().After(expiresAt) {
+		return ErrInvalidToken
+	}
+
+	err = s.cache.AddRevokedToken(ctx, claims.ID, time.Until(expiresAt))
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

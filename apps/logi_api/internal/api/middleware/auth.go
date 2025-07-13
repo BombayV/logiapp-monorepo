@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"bombayv/logiapp-monorepo/logi_api/internal/config"
+	"bombayv/logiapp-monorepo/logi_api/internal/storage/cache"
 	"net/http"
 	"slices"
 
@@ -39,6 +40,25 @@ func AuthMiddleware(role []string) gin.HandlerFunc {
 		}
 
 		if claims, ok := token.Claims.(*Claims); ok && token.Valid {
+			// Check if the token is revoked
+			cacheVal, exists := c.Get("cache")
+			if !exists {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+				c.Abort()
+				return
+			}
+			isRevoked, err := cacheVal.(*cache.Cache).IsTokenRevoked(c.Request.Context(), claims.ID)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+				c.Abort()
+				return
+			}
+			if isRevoked {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "Token has been revoked"})
+				c.Abort()
+				return
+			}
+
 			c.Set("userID", claims.UserID)
 			c.Set("role", claims.Role)
 			// Check if the user is admin or if the role is allowed
