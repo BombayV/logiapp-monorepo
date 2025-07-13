@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:logi_app/config/constants.dart';
+import 'package:logi_app/main.dart';
 import 'package:logi_app/orderdetails.dart';
+import 'package:logi_app/auth/auth.dart';
 
 class driverPage extends StatelessWidget {
+
   const driverPage({super.key});
 
   @override
@@ -35,8 +39,20 @@ class driverPage extends StatelessWidget {
                 case 'account':
                   break;
                 case 'logout':
-                  Navigator.popUntil(context, (route) => route.isFirst);
-                  break;
+                  AuthService authService = AuthService(apiUrl: apiBaseUrl);
+                  authService.logout().then((success) {
+                    if (success) {
+                      Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(builder: (context) => MyApp()),
+                          (route) => false
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Error al cerrar sesión')),
+                      );
+                    }
+                  });
               }
             }, itemBuilder: (BuildContext context) => [
               const PopupMenuItem<String>(

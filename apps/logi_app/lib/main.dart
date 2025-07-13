@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:logi_app/driver.dart';
+import 'package:logi_app/auth/auth.dart';
+import 'package:logi_app/config/constants.dart';
 
 void main() {
   runApp(const MyApp());
@@ -8,7 +10,6 @@ void main() {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -71,6 +72,10 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+
+  final userController = TextEditingController();
+  final passwordController = TextEditingController();
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -92,38 +97,60 @@ class _MyHomePageState extends State<MyHomePage> {
 
             TextField(
               decoration: const InputDecoration(labelText: 'Usuario'),
+              keyboardType: TextInputType.emailAddress,
+              controller: userController,
             ),
             TextField(
               decoration: const InputDecoration(labelText: 'Contraseña'),
               obscureText: true,
+              controller: passwordController,
             ),
             const SizedBox(height: 20),
             ElevatedButton(
               style: ButtonStyle(
-                backgroundColor: MaterialStateProperty.all(const Color(0xFF74bfc3)),
-                foregroundColor: MaterialStateProperty.all(const Color(0xFF0b0808)),
-                overlayColor: MaterialStateProperty.resolveWith<Color?>(
-                      (Set<MaterialState> states) {
-                    if (states.contains(MaterialState.pressed)) {
+                backgroundColor: WidgetStateProperty.all(const Color(0xFF74bfc3)),
+                foregroundColor: WidgetStateProperty.all(const Color(0xFF0b0808)),
+                overlayColor: WidgetStateProperty.resolveWith<Color?>(
+                      (Set<WidgetState> states) {
+                    if (states.contains(WidgetState.pressed)) {
                       return const Color(0xFF0B212D);
                     }
                     return null;
                   },
                 ),
-                padding: MaterialStateProperty.all(
+                padding: WidgetStateProperty.all(
                   const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                 ),
-                shape: MaterialStateProperty.all(
+                shape: WidgetStateProperty.all(
                   RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20.0),
                   ),
                 ),
               ),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const driverPage()),
-                );
+              onPressed: () async {
+                final username = userController.text;
+                final password = passwordController.text;
+
+                if (username.isEmpty || password.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Por favor, complete todos los campos')),
+                  );
+                  return;
+                }
+
+                AuthService authService = AuthService(apiUrl: apiBaseUrl);
+
+                if(await authService.login(username, password)) {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (context) => const driverPage()),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Error al iniciar sesión')),
+                  );
+                }
+
               },
               child: const Text('Ingresar'),
             ),

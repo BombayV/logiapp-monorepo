@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:logi_app/main.dart';
+import 'package:logi_app/config/constants.dart';
+import 'package:logi_app/auth/auth.dart';
 
 class OrderDetailsPage extends StatelessWidget {
   final String orderId;
   final String status;
+
   const OrderDetailsPage({super.key, required this.orderId, required this.status});
 
   @override
@@ -36,7 +40,20 @@ class OrderDetailsPage extends StatelessWidget {
                   case 'account':
                     break;
                   case 'logout':
-                    Navigator.popUntil(context, (route) => route.isFirst);
+                    AuthService authService = AuthService(apiUrl: apiBaseUrl);
+                    authService.logout().then((success) {
+                      if (success) {
+                        Navigator.pushAndRemoveUntil(
+                            context,
+                            MaterialPageRoute(builder: (context) => MyApp()),
+                                (route) => false
+                        );
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Error al cerrar sesión')),
+                        );
+                      }
+                    });
                     break;
                 }
               }, itemBuilder: (BuildContext context) => [
@@ -67,7 +84,7 @@ class OrderDetailsPage extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.grey.withOpacity(0.2),
+                      color: Colors.grey,
                       blurRadius: 6,
                       offset: Offset(0, 2),
                     ),
@@ -194,20 +211,20 @@ class OrderDetailsPage extends StatelessWidget {
               ),
               ElevatedButton(
                 style: ButtonStyle(
-                  backgroundColor: MaterialStateProperty.all(const Color(0xFF74bfc3)),
-                  foregroundColor: MaterialStateProperty.all(const Color(0xFF0b0808)),
-                  overlayColor: MaterialStateProperty.resolveWith<Color?>(
-                        (Set<MaterialState> states) {
-                      if (states.contains(MaterialState.pressed)) {
+                  backgroundColor: WidgetStateProperty.all(const Color(0xFF74bfc3)),
+                  foregroundColor: WidgetStateProperty.all(const Color(0xFF0b0808)),
+                  overlayColor: WidgetStateProperty.resolveWith<Color?>(
+                        (Set<WidgetState> states) {
+                      if (states.contains(WidgetState.pressed)) {
                         return const Color(0xFF0B212D);
                       }
                       return null;
                     },
                   ),
-                  padding: MaterialStateProperty.all(
+                  padding: WidgetStateProperty.all(
                     const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                   ),
-                  shape: MaterialStateProperty.all(
+                  shape: WidgetStateProperty.all(
                     RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20.0),
                     ),
