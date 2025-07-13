@@ -119,3 +119,13 @@ func (s *Service) Logout(ctx context.Context, tokenString string) error {
 
 	return nil
 }
+
+// GetUserProfile retrieves a user's profile information by user ID.
+func (s *Service) GetUserProfile(ctx context.Context, userID string) (*User, *UserData, error) {
+	user, userData, err := s.repo.FindByID(ctx, userID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return user, userData, nil
+}

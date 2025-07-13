@@ -82,7 +82,7 @@ func (h *UserHandler) Login(c *gin.Context) {
 	if err != nil {
 		switch err {
 		case user.ErrInvalidCredentials:
-			c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid email or password"})
 		default:
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to login"})
 		}
@@ -105,4 +105,36 @@ func (h *UserHandler) Logout(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Successfully logged out"})
+}
+
+// Me handles getting the current user's profile information.
+func (h *UserHandler) Me(c *gin.Context) {
+	userID, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	userIDStr, ok := userID.(string)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	user, userData, err := h.UserService.GetUserProfile(c.Request.Context(), userIDStr)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve user profile"})
+		return
+	}
+
+	// Return user profile without sensitive information
+	c.JSON(http.StatusOK, gin.H{
+		"user": user.Email,
+		"role": user.Role,
+		"profile": gin.H{
+			"first_name":   userData.FirstName,
+			"last_name":    userData.LastName,
+			"phone_number": userData.PhoneNumber,
+		},
+	})
 }

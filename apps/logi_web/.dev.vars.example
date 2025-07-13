@@ -1,0 +1,6 @@
+# Local development environment variables for Cloudflare
+# Copy this file to .dev.vars and add your actual values
+# This file is for local development only and will not be deployed
+
+# Backend API URL
+BACKEND_URL=http://localhost:8080

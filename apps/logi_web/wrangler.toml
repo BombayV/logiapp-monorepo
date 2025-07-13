@@ -1,0 +1,22 @@
+name = "logi-web"
+compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Cloudflare Pages configuration
+pages_build_output_dir = ".svelte-kit/cloudflare"
+
+# Environment variables (add your own as needed)
+[env.production.vars]
+# Add production environment variables here
+# EXAMPLE_VAR = "production_value"
+
+[env.preview.vars]
+# Add preview environment variables here
+# EXAMPLE_VAR = "preview_value"
+
+# Build configuration
+[[env.production.env.vars]]
+NODE_ENV = "production"
+
+[[env.preview.env.vars]]
+NODE_ENV = "preview"

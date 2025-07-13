@@ -58,3 +58,43 @@ func (r *UserRepository) FindByEmail(ctx context.Context, email string) (*user.U
 	}
 	return u, nil
 }
+
+// FindByID retrieves a user and their data by user ID.
+func (r *UserRepository) FindByID(ctx context.Context, userID string) (*user.User, *user.UserData, error) {
+	tx, err := r.db.Pool.Begin(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer tx.Rollback(ctx)
+
+	// Get user info
+	userQuery := `
+		SELECT user_id, email, password_hash, role, created_at, updated_at
+		FROM users
+		WHERE user_id = $1
+	`
+	u := &user.User{}
+	err = tx.QueryRow(ctx, userQuery, userID).Scan(&u.UserID, &u.Email, &u.PasswordHash, &u.Role, &u.CreatedAt, &u.UpdatedAt)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Get user data
+	userDataQuery := `
+		SELECT user_id, first_name, last_name, phone_number, last_connection, created_at, updated_at
+		FROM users_data
+		WHERE user_id = $1
+	`
+	ud := &user.UserData{}
+	err = tx.QueryRow(ctx, userDataQuery, userID).Scan(&ud.UserID, &ud.FirstName, &ud.LastName, &ud.PhoneNumber, &ud.LastConnection, &ud.CreatedAt, &ud.UpdatedAt)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return u, ud, nil
+}

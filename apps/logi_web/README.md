@@ -1,36 +1,79 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Logi Web - SvelteKit Application
 
-## Getting Started
+A modern SvelteKit application configured for Cloudflare Pages deployment using Bun.
 
-First, run the development server:
+## Development
+
+Install dependencies and start the development server:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+bun install
+bun run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Building
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+To create a production build optimized for Cloudflare Pages:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+bun run build
+```
 
-## Learn More
+## Cloudflare Deployment
 
-To learn more about Next.js, take a look at the following resources:
+This project is configured with the Cloudflare adapter for seamless deployment to Cloudflare Pages.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Local Development with Cloudflare
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Test your app locally with Cloudflare's runtime:
 
-## Deploy on Vercel
+```bash
+bun run build
+bun run cf:dev
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Deploy to Cloudflare Pages
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. **First time setup**: Login to Wrangler
+   ```bash
+   bunx wrangler login
+   ```
+
+2. **Deploy your application**:
+   ```bash
+   bun run cf:deploy
+   ```
+
+3. **Monitor deployments**:
+   ```bash
+   bun run cf:tail
+   ```
+
+### Environment Variables
+
+1. Copy the example environment file:
+   ```bash
+   cp .dev.vars.example .dev.vars
+   ```
+
+2. Add your environment variables to `.dev.vars` for local development
+
+3. For production, set environment variables in the Cloudflare Pages dashboard or using Wrangler:
+   ```bash
+   bunx wrangler pages secret put VARIABLE_NAME
+   ```
+
+### Configuration
+
+- **Adapter**: `@sveltejs/adapter-cloudflare` for Cloudflare Pages optimization
+- **Runtime**: Cloudflare Workers with Node.js compatibility
+- **Build Output**: `.svelte-kit/cloudflare/`
+
+## Scripts
+
+- `bun run dev` - Start development server
+- `bun run build` - Build for production
+- `bun run preview` - Preview production build locally
+- `bun run cf:dev` - Start local Cloudflare development server
+- `bun run cf:deploy` - Deploy to Cloudflare Pages
+- `bun run cf:tail` - Monitor deployment logs

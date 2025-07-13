@@ -6,4 +6,5 @@ import "context"
 type Repository interface {
 	Save(ctx context.Context, user *User, userData *UserData) error
 	FindByEmail(ctx context.Context, email string) (*User, error)
+	FindByID(ctx context.Context, userID string) (*User, *UserData, error)
 }

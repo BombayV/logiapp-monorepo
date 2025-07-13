@@ -39,8 +39,8 @@ func SetupRouter(db *database.DB, redisCache *cache.Cache, userHandler *handlers
 
 		// User routes (protected)
 		v1.POST("/users/login", userHandler.Login)
-		v1.POST("/users/logout", middleware.AuthMiddleware([]string{}), userHandler.Logout)
-		// Apply auth middleware to registration route
+		v1.POST("/users/logout", middleware.AuthMiddleware([]string{"sales", "driver", "admin"}), userHandler.Logout)
+		v1.GET("/users/me", middleware.AuthMiddleware([]string{"sales", "driver", "admin"}), userHandler.Me)
 		v1.POST("/users/register", middleware.AuthMiddleware([]string{"admin", "sales"}), userHandler.RegisterUser)
 
 		// Test route for revoked tokens
