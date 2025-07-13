@@ -7,7 +7,7 @@ type User struct {
 	UserID       string    `json:"user_id" gorm:"primaryKey;type:varchar(36)"`
 	Email        string    `json:"email" gorm:"type:varchar(100);unique;not null"`
 	PasswordHash string    `json:"-" gorm:"type:varchar(255);not null"` // Store hashed password
-	UserRole     string    `json:"user_role" gorm:"type:user_role;not null;default:'sales'"`
+	Role         string    `json:"role" gorm:"type:user_role;not null;default:'sales'"`
 	CreatedAt    time.Time `json:"created_at" gorm:"type:timestamp with time zone;default:current_timestamp"`
 	UpdatedAt    time.Time `json:"updated_at" gorm:"type:timestamp with time zone;default:current_timestamp"`
 }

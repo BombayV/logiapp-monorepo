@@ -9,6 +9,16 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// UserHandler holds the dependencies for the user handlers.
+type UserHandler struct {
+	UserService *user.Service
+}
+
+// NewUserHandler creates a new UserHandler.
+func NewUserHandler(userService *user.Service) *UserHandler {
+	return &UserHandler{UserService: userService}
+}
+
 type RegisterUserRequest struct {
 	Email     string `json:"email" binding:"required,email"`
 	Password  string `json:"password" binding:"required,min=8"`
@@ -19,7 +29,7 @@ type RegisterUserRequest struct {
 }
 
 // RegisterUser handles new user registration.
-func RegisterUser(c *gin.Context) {
+func (h *UserHandler) RegisterUser(c *gin.Context) {
 	var request RegisterUserRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -29,7 +39,8 @@ func RegisterUser(c *gin.Context) {
 		return
 	}
 
-	newUser, err := user.CreateUser(
+	newUser, err := h.UserService.CreateUser(
+		c.Request.Context(),
 		request.Email,
 		request.Password,
 		request.FirstName,
@@ -39,9 +50,14 @@ func RegisterUser(c *gin.Context) {
 	)
 
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": err.Error(),
-		})
+		switch err {
+		case user.ErrEmailExists:
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		case user.ErrInvalidCredentials, user.ErrPasswordTooWeak:
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		}
 		return
 	}
 

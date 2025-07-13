@@ -2,7 +2,9 @@ package main
 
 import (
 	"bombayv/logiapp-monorepo/logi_api/internal/api"
+	"bombayv/logiapp-monorepo/logi_api/internal/api/handlers"
 	"bombayv/logiapp-monorepo/logi_api/internal/config"
+	"bombayv/logiapp-monorepo/logi_api/internal/core/user"
 	"bombayv/logiapp-monorepo/logi_api/internal/storage/cache"
 	"bombayv/logiapp-monorepo/logi_api/internal/storage/database"
 	"fmt"
@@ -29,10 +31,19 @@ func main() {
 	}
 	defer redisCache.Close()
 
+	// Initialize repositories
+	userRepo := database.NewUserRepository(db)
+
+	// Initialize services
+	userService := user.NewService(userRepo)
+
+	// Initialize handlers
+	userHandler := handlers.NewUserHandler(userService)
+
 	fmt.Println("Starting server on port", config.App.ServerPort)
 
 	// Setup router
-	router := api.SetupRouter(db, redisCache)
+	router := api.SetupRouter(db, redisCache, userHandler)
 
 	// Start server
 	err = router.Run(":" + config.App.ServerPort)

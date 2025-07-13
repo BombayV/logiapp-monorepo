@@ -13,7 +13,7 @@ import (
 )
 
 // SetupRouter configures the Gin router with all the necessary routes and middleware.
-func SetupRouter(db *database.DB, redisCache *cache.Cache) *gin.Engine {
+func SetupRouter(db *database.DB, redisCache *cache.Cache, userHandler *handlers.UserHandler) *gin.Engine {
 	gin.SetMode(config.App.GinMode)
 	router := gin.Default()
 	if config.App.TrustedProxy != "" {
@@ -37,7 +37,7 @@ func SetupRouter(db *database.DB, redisCache *cache.Cache) *gin.Engine {
 		// User routes (protected)
 		v1.POST("/users/login", handlers.LoginUser)
 		// Apply auth middleware to registration route
-		v1.POST("/users/register", middleware.AuthMiddleware([]string{""}), handlers.RegisterUser)
+		v1.POST("/users/register", middleware.AuthMiddleware([]string{""}), userHandler.RegisterUser)
 	}
 
 	return router
