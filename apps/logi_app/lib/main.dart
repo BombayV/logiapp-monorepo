@@ -139,15 +139,15 @@ class _MyHomePageState extends State<MyHomePage> {
                 }
 
                 AuthService authService = AuthService(apiUrl: apiBaseUrl);
-
-                if(await authService.login(username, password)) {
+                final loginResult = await authService.login(username, password) as Map<String, dynamic>;
+                if(loginResult['success'] == true) {
                   Navigator.pushReplacement(
                     context,
-                    MaterialPageRoute(builder: (context) => const driverPage()),
+                    MaterialPageRoute(builder: (context) => driverPage()),
                   );
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Error al iniciar sesión')),
+                    SnackBar(content: Text(loginResult['message'] ?? 'Error al iniciar sesión')),
                   );
                 }
 

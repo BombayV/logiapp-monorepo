@@ -1,13 +1,25 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:logi_app/main.dart';
 import 'package:logi_app/config/constants.dart';
 import 'package:logi_app/auth/auth.dart';
+import 'package:logi_app/secureStorage/flutter_secure_storage.dart';
 
 class OrderDetailsPage extends StatelessWidget {
   final String orderId;
   final String status;
+  final SecureStorageService secureStorage = SecureStorageService();
 
-  const OrderDetailsPage({super.key, required this.orderId, required this.status});
+  OrderDetailsPage({super.key, required this.orderId, required this.status});
+
+  Future<String> getUserFullName() async {
+    final userDataString = await secureStorage.getUserData();
+    final userData = jsonDecode(userDataString as String);
+    final nombre = userData['profile']?['first_name'] ?? '';
+    final apellido = userData['profile']?['last_name'] ?? '';
+    return '$nombre $apellido';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,39 +45,44 @@ class OrderDetailsPage extends StatelessWidget {
           ],
         ),
         actions: [
-          PopupMenuButton(
-              icon: const Icon(Icons.more_vert),
-              onSelected: (value){
-                switch(value){
-                  case 'account':
-                    break;
-                  case 'logout':
-                    AuthService authService = AuthService(apiUrl: apiBaseUrl);
-                    authService.logout().then((success) {
-                      if (success) {
-                        Navigator.pushAndRemoveUntil(
-                            context,
-                            MaterialPageRoute(builder: (context) => MyApp()),
-                                (route) => false
-                        );
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Error al cerrar sesión')),
-                        );
-                      }
-                    });
-                    break;
-                }
-              }, itemBuilder: (BuildContext context) => [
-            const PopupMenuItem<String>(
-              value: 'account',
-              child: Text('Adrian Cavero'), // Replace with actual user name when the api is implemented
-            ),
-            const PopupMenuItem<String>(
-              value: 'logout',
-              child: Text('Cerrar Sesión'),
-            ),
-          ]
+          FutureBuilder<String>(
+            future: getUserFullName(),
+            builder: (context, snapshot) {
+              final userName = snapshot.data ?? '';
+              return PopupMenuButton(
+                  icon: const Icon(Icons.more_vert),
+                  onSelected: (value){
+                    switch(value){
+                      case 'account':
+                        break;
+                      case 'logout':
+                        AuthService authService = AuthService(apiUrl: apiBaseUrl);
+                        authService.logout().then((success) {
+                          if (success) {
+                            Navigator.pushAndRemoveUntil(
+                                context,
+                                MaterialPageRoute(builder: (context) => MyApp()),
+                                    (route) => false
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Error al cerrar sesión')),
+                            );
+                          }
+                        });
+                    }
+                  }, itemBuilder: (BuildContext context) => [
+                PopupMenuItem<String>(
+                  value: 'account',
+                  child: Text(userName),
+                ),
+                const PopupMenuItem<String>(
+                  value: 'logout',
+                  child: Text('Cerrar Sesión'),
+                ),
+              ]
+              );
+            },
           ),
         ],
       ),

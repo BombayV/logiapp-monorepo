@@ -7,7 +7,7 @@ class AuthService {
   final SecureStorageService secureStorage = SecureStorageService();
   AuthService({required this.apiUrl});
 
-  Future<bool> login(String username, String password) async {
+  Future<Object> login(String username, String password) async {
     final response = await post(
       Uri.parse('$apiUrl/v1/users/login'),
       headers: {'Content-Type': 'application/json'},
@@ -17,10 +17,31 @@ class AuthService {
     final data = jsonDecode(response.body);
     if (response.statusCode == 200) {
       await secureStorage.saveToken(data['token']);
-      return true;
+      await me();
+      return {
+        'success': true,
+        'token': data['token'],
+        'message': 'Login successful',
+      };
+
     } else {
-      throw Exception('Failed to login: ${data['error']}');
+      return {
+        'success': false,
+        'message': data['error'] ?? 'Login failed',
+      };
     }
+  }
+
+  Future<void> me() async {
+    final response = await get(
+      Uri.parse('$apiUrl/v1/users/me'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ${await secureStorage.getToken()}'
+      },
+    );
+    final data = jsonDecode(response.body);
+    await secureStorage.saveUserData(data);
   }
 
   Future<bool> logout() async {
@@ -31,6 +52,7 @@ class AuthService {
 
     if (response.statusCode == 200) {
       await secureStorage.deleteToken();
+      await secureStorage.deleteUserData();
       return true;
     } else {
       throw Exception('Failed to logout');
