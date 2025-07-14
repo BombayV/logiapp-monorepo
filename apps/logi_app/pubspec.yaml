@@ -45,11 +45,16 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
   rename: ^3.0.2
+  flutter_launcher_icons: ^0.14.4
 
 flutter_launcher_icons:
   android: true
   ios: true
   image_path: "assets/logo.png"
+  remove_alpha_ios: true
+  min_sdk_android: 21  # Permitir iconos adaptativos
+  adaptive_icon_background: "#ffffff"  # Fondo blanco para el icono adaptativo
+  adaptive_icon_foreground: "assets/logo.png"  # Logo como primer plano
 
 flutter:
   uses-material-design: true
