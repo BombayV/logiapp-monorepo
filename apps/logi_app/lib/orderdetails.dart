@@ -1,24 +1,129 @@
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:logi_app/main.dart';
 import 'package:logi_app/config/constants.dart';
 import 'package:logi_app/auth/auth.dart';
 import 'package:logi_app/secureStorage/flutter_secure_storage.dart';
 
-class OrderDetailsPage extends StatelessWidget {
+class OrderDetailsPage extends StatefulWidget {
   final String orderId;
   final String status;
-  final SecureStorageService secureStorage = SecureStorageService();
 
-  OrderDetailsPage({super.key, required this.orderId, required this.status});
+  const OrderDetailsPage({
+    super.key,
+    required this.orderId,
+    required this.status,
+  });
+
+  @override
+  State<OrderDetailsPage> createState() => _OrderDetailsPageState();
+}
+
+class _OrderDetailsPageState extends State<OrderDetailsPage> {
+  final SecureStorageService secureStorage = SecureStorageService();
+  late final AuthService authService;
+  late String currentStatus;
+  bool _isUpdatingStatus = false;
+
+  @override
+  void initState() {
+    super.initState();
+    authService = AuthService(apiUrl: apiBaseUrl);
+    currentStatus = widget.status;
+  }
 
   Future<String> getUserFullName() async {
-    final userDataString = await secureStorage.getUserData();
-    final userData = jsonDecode(userDataString as String);
-    final nombre = userData['profile']?['first_name'] ?? '';
-    final apellido = userData['profile']?['last_name'] ?? '';
-    return '$nombre $apellido';
+    try {
+      final userDataString = await secureStorage.getUserData();
+      if (userDataString == null) return '';
+
+      final userData = jsonDecode(userDataString);
+      final nombre = userData['profile']?['first_name'] ?? '';
+      final apellido = userData['profile']?['last_name'] ?? '';
+      return '$nombre $apellido'.trim();
+    } catch (e) {
+      print('Error al obtener datos del usuario: $e');
+      return '';
+    }
+  }
+
+  Future<void> _handleLogout() async {
+    try {
+      final success = await authService.logout();
+      if (success) {
+        if (mounted) {
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => const MyApp()),
+            (route) => false,
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Error al cerrar sesión')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _updateOrderStatus() async {
+    setState(() {
+      _isUpdatingStatus = true;
+    });
+
+    try {
+      // Simular actualización del estado del pedido
+      await Future.delayed(const Duration(seconds: 1));
+
+      setState(() {
+        currentStatus = currentStatus == 'Pendiente' ? 'En Proceso' : 'Entregado';
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Estado actualizado a: $currentStatus'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al actualizar estado: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUpdatingStatus = false;
+        });
+      }
+    }
+  }
+
+  Color _getStatusColor() {
+    switch (currentStatus) {
+      case 'Pendiente':
+        return Colors.orange;
+      case 'En Proceso':
+        return Colors.blue;
+      case 'Entregado':
+        return Colors.green;
+      default:
+        return Colors.grey;
+    }
   }
 
   @override
@@ -26,6 +131,10 @@ class OrderDetailsPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
         title: Row(
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
@@ -35,10 +144,13 @@ class OrderDetailsPage extends StatelessWidget {
                 'assets/logo.png',
                 height: 32,
                 width: 32,
+                errorBuilder: (context, error, stackTrace) {
+                  return const Icon(Icons.local_shipping, size: 32);
+                },
               ),
             ),
-            SizedBox(width: 10),
-            Text(
+            const SizedBox(width: 10),
+            const Text(
               'LogiApp',
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
@@ -48,218 +160,257 @@ class OrderDetailsPage extends StatelessWidget {
           FutureBuilder<String>(
             future: getUserFullName(),
             builder: (context, snapshot) {
-              final userName = snapshot.data ?? '';
-              return PopupMenuButton(
-                  icon: const Icon(Icons.more_vert),
-                  onSelected: (value){
-                    switch(value){
-                      case 'account':
-                        break;
-                      case 'logout':
-                        AuthService authService = AuthService(apiUrl: apiBaseUrl);
-                        authService.logout().then((success) {
-                          if (success) {
-                            Navigator.pushAndRemoveUntil(
-                                context,
-                                MaterialPageRoute(builder: (context) => MyApp()),
-                                    (route) => false
-                            );
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Error al cerrar sesión')),
-                            );
-                          }
-                        });
-                    }
-                  }, itemBuilder: (BuildContext context) => [
-                PopupMenuItem<String>(
-                  value: 'account',
-                  child: Text(userName),
-                ),
-                const PopupMenuItem<String>(
-                  value: 'logout',
-                  child: Text('Cerrar Sesión'),
-                ),
-              ]
+              final userName = snapshot.data ?? 'Usuario';
+              return PopupMenuButton<String>(
+                icon: const Icon(Icons.more_vert),
+                onSelected: (value) {
+                  switch (value) {
+                    case 'account':
+                      // TODO: Implementar navegación a cuenta
+                      break;
+                    case 'logout':
+                      _handleLogout();
+                      break;
+                  }
+                },
+                itemBuilder: (BuildContext context) => [
+                  PopupMenuItem<String>(
+                    value: 'account',
+                    child: Row(
+                      children: [
+                        const Icon(Icons.person),
+                        const SizedBox(width: 8),
+                        Text(userName),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem<String>(
+                    value: 'logout',
+                    child: Row(
+                      children: [
+                        Icon(Icons.exit_to_app),
+                        SizedBox(width: 8),
+                        Text('Cerrar Sesión'),
+                      ],
+                    ),
+                  ),
+                ],
               );
             },
           ),
         ],
       ),
-      body:SingleChildScrollView(
-      child: Center(
+      body: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.all(8.0),
+          padding: const EdgeInsets.all(16.0),
           child: Column(
             children: [
-              Container(
-                padding: const EdgeInsets.all(16.0),
-                margin: const EdgeInsets.only(bottom: 20.0),
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.grey,
-                      blurRadius: 6,
-                      offset: Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Detalles del Pedido',
-                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                    ),
-                    SizedBox(height: 20),
-                    Text('ID del Pedido: $orderId', style: TextStyle(fontSize: 18)),
-                    SizedBox(height: 10),
-                    Text('Estado: $status', style: TextStyle(fontSize: 18)),
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.all(16.0),
-                margin: const EdgeInsets.only(bottom: 20.0),
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.grey.withOpacity(0.2),
-                      blurRadius: 6,
-                      offset: Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Dirreción de Entrega',
-                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                    ),
-                    SizedBox(height: 20),
-                    Text('Guayacanes', style: TextStyle(fontSize: 18)),
-                    SizedBox(height: 10),
-                    Text('Ciudad: Rumiñahui', style: TextStyle(fontSize: 18)),
-                    SizedBox(height: 10),
-                    Text('Estado: Pichincha', style: TextStyle(fontSize: 18)),
-                    SizedBox(height: 10),
-                    Text('Código Postal: 171101', style: TextStyle(fontSize: 18)),
-                    SizedBox(height: 10),
-                  ],
-                ),
-              ),
-              // Crear una sección para mostrar los productos del pedido en una tabla con el nombre y la cantidad
-              // Sección de productos del pedido
-              Container(
-                padding: const EdgeInsets.all(16.0),
-                margin: const EdgeInsets.only(bottom: 20.0),
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.grey.withOpacity(0.2),
-                      blurRadius: 6,
-                      offset: Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Productos',
-                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                    ),
-                    SizedBox(height: 20),
-                    Table(
-                      border: TableBorder.all(color: Colors.grey.shade300),
-                      children: [
-                        TableRow(
-                          decoration: BoxDecoration(color: Colors.grey.shade200),
-                          children: [
-                            Padding(
-                              padding: EdgeInsets.all(8.0),
-                              child: Text('Nombre', style: TextStyle(fontWeight: FontWeight.bold)),
-                            ),
-                            Padding(
-                              padding: EdgeInsets.all(8.0),
-                              child: Text('Cantidad', style: TextStyle(fontWeight: FontWeight.bold)),
-                            ),
-                          ],
-                        ),
-                        // Ejemplo de productos, reemplazar con datos reales
-                        TableRow(
-                          children: [
-                            Padding(
-                              padding: EdgeInsets.all(8.0),
-                              child: Text('Producto 1'),
-                            ),
-                            Padding(
-                              padding: EdgeInsets.all(8.0),
-                              child: Text('2'),
-                            ),
-                          ],
-                        ),
-                        TableRow(
-                          children: [
-                            Padding(
-                              padding: EdgeInsets.all(8.0),
-                              child: Text('Producto 2'),
-                            ),
-                            Padding(
-                              padding: EdgeInsets.all(8.0),
-                              child: Text('1'),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              ElevatedButton(
-                style: ButtonStyle(
-                  backgroundColor: WidgetStateProperty.all(const Color(0xFF74bfc3)),
-                  foregroundColor: WidgetStateProperty.all(const Color(0xFF0b0808)),
-                  overlayColor: WidgetStateProperty.resolveWith<Color?>(
-                        (Set<WidgetState> states) {
-                      if (states.contains(WidgetState.pressed)) {
-                        return const Color(0xFF0B212D);
-                      }
-                      return null;
-                    },
-                  ),
-                  padding: WidgetStateProperty.all(
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                  ),
-                  shape: WidgetStateProperty.all(
-                    RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20.0),
-                    ),
-                  ),
-                ),
-                onPressed: () {
-                  // Logic to change the status of the order
-                },
-                // Change the text if the status is 'Pendiente' or 'En Proceso'
-                child: Text(
-                  status == 'Pendiente' ? 'Marcar como En Proceso' : 'Marcar como Entregado',
-                  style: TextStyle(fontSize: 18),
-                ),
-              ),
-            ]),
+              _buildOrderInfoCard(),
+              const SizedBox(height: 16),
+              _buildDeliveryAddressCard(),
+              const SizedBox(height: 16),
+              _buildProductsCard(),
+              const SizedBox(height: 24),
+              _buildStatusButton(),
+            ],
+          ),
         ),
-      )
-      )
+      ),
+    );
+  }
+
+  Widget _buildOrderInfoCard() {
+    return Card(
+      elevation: 4,
+      child: Container(
+        padding: const EdgeInsets.all(16.0),
+        width: double.infinity,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Detalles del Pedido',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'ID del Pedido: ${widget.orderId}',
+                  style: const TextStyle(fontSize: 16),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: _getStatusColor(),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    currentStatus,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDeliveryAddressCard() {
+    return Card(
+      elevation: 4,
+      child: Container(
+        padding: const EdgeInsets.all(16.0),
+        width: double.infinity,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Dirección de Entrega',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            const Row(
+              children: [
+                Icon(Icons.location_on, color: Colors.red),
+                SizedBox(width: 8),
+                Text('Guayacanes', style: TextStyle(fontSize: 16)),
+              ],
+            ),
+            const SizedBox(height: 8),
+            const Row(
+              children: [
+                Icon(Icons.location_city, color: Colors.blue),
+                SizedBox(width: 8),
+                Text('Ciudad: Rumiñahui', style: TextStyle(fontSize: 16)),
+              ],
+            ),
+            const SizedBox(height: 8),
+            const Row(
+              children: [
+                Icon(Icons.map, color: Colors.green),
+                SizedBox(width: 8),
+                Text('Estado: Pichincha', style: TextStyle(fontSize: 16)),
+              ],
+            ),
+            const SizedBox(height: 8),
+            const Row(
+              children: [
+                Icon(Icons.local_post_office, color: Colors.orange),
+                SizedBox(width: 8),
+                Text('Código Postal: 171101', style: TextStyle(fontSize: 16)),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProductsCard() {
+    return Card(
+      elevation: 4,
+      child: Container(
+        padding: const EdgeInsets.all(16.0),
+        width: double.infinity,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Productos',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            Table(
+              border: TableBorder.all(color: Colors.grey.shade300),
+              children: [
+                TableRow(
+                  decoration: BoxDecoration(color: Colors.grey.shade200),
+                  children: const [
+                    Padding(
+                      padding: EdgeInsets.all(12.0),
+                      child: Text(
+                        'Nombre',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    Padding(
+                      padding: EdgeInsets.all(12.0),
+                      child: Text(
+                        'Cantidad',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ],
+                ),
+                const TableRow(
+                  children: [
+                    Padding(
+                      padding: EdgeInsets.all(12.0),
+                      child: Text('Producto Example 1'),
+                    ),
+                    Padding(
+                      padding: EdgeInsets.all(12.0),
+                      child: Text('2', textAlign: TextAlign.center),
+                    ),
+                  ],
+                ),
+                const TableRow(
+                  children: [
+                    Padding(
+                      padding: EdgeInsets.all(12.0),
+                      child: Text('Producto Example 2'),
+                    ),
+                    Padding(
+                      padding: EdgeInsets.all(12.0),
+                      child: Text('1', textAlign: TextAlign.center),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusButton() {
+    if (currentStatus == 'Entregado') {
+      return const SizedBox.shrink();
+    }
+
+    return SizedBox(
+      width: double.infinity,
+      height: 50,
+      child: ElevatedButton(
+        onPressed: _isUpdatingStatus ? null : _updateOrderStatus,
+        child: _isUpdatingStatus
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              )
+            : Text(
+                currentStatus == 'Pendiente'
+                    ? 'Marcar como En Proceso'
+                    : 'Marcar como Entregado',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+      ),
     );
   }
 }

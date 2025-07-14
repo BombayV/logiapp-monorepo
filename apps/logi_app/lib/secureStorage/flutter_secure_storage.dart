@@ -9,21 +9,16 @@ class SecureStorageService {
   }
 
   Future<void> saveUserData(Map<String, dynamic> userData) async {
-    await _storage.write(key: 'user_data', value: userData.toString());
+    await _storage.write(key: 'user_data', value: jsonEncode(userData));
   }
 
-  Future<Map<String, dynamic>?> getUserData() async {
-    String? userDataString = await _storage.read(key: 'user_data');
-    if (userDataString != null) {
-      return Map<String, dynamic>.from(jsonDecode(userDataString));
-    }
-    return null;
+  Future<String?> getUserData() async {
+    return await _storage.read(key: 'user_data');
   }
 
   Future<void> deleteUserData() async {
     await _storage.delete(key: 'user_data');
   }
-
 
   Future<String?> getToken() async {
     return await _storage.read(key: 'auth_token');
@@ -31,5 +26,9 @@ class SecureStorageService {
 
   Future<void> deleteToken() async {
     await _storage.delete(key: 'auth_token');
+  }
+
+  Future<void> clearAll() async {
+    await _storage.deleteAll();
   }
 }
