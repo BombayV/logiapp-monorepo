@@ -34,7 +34,7 @@ func NewService(repo Repository, cache *cache.Cache) *Service {
 func (s *Service) CreateUser(ctx context.Context, email, password, firstName, lastName, phone, role string) (*User, error) {
 	// 2. Validate role
 	if role != "sales" && role != "driver" {
-		return nil, errors.New("invalid role provided: must be 'sales' or 'driver'")
+		return nil, errors.New("invalid role provided: must be 'sales', or 'driver'")
 	}
 
 	// 3. Validate email and password strength.
@@ -128,4 +128,86 @@ func (s *Service) GetUserProfile(ctx context.Context, userID string) (*User, *Us
 	}
 
 	return user, userData, nil
+}
+
+// GetAllUsers retrieves all users with pagination (admin function).
+func (s *Service) GetAllUsers(ctx context.Context, limit, offset int) ([]*User, int, error) {
+	users, total, err := s.repo.FindAll(ctx, limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return users, total, nil
+}
+
+// GetUsersByRole retrieves users filtered by role.
+func (s *Service) GetUsersByRole(ctx context.Context, role string) ([]*User, error) {
+	// Validate role
+	if role != "admin" && role != "driver" && role != "sales" {
+		return nil, errors.New("invalid role provided")
+	}
+
+	users, err := s.repo.FindByRole(ctx, role)
+	if err != nil {
+		return nil, err
+	}
+
+	return users, nil
+}
+
+// UpdateUserProfile updates a user's profile information.
+func (s *Service) UpdateUserProfile(ctx context.Context, userID string, firstName, lastName, phone, role *string) (*User, *UserData, error) {
+	// Get current user data
+	user, userData, err := s.repo.FindByID(ctx, userID)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Update fields if provided
+	if firstName != nil {
+		userData.FirstName = *firstName
+	}
+	if lastName != nil {
+		userData.LastName = *lastName
+	}
+	if phone != nil {
+		userData.PhoneNumber = *phone
+	}
+	if role != nil {
+		// Validate role
+		if *role != "admin" && *role != "driver" && *role != "sales" {
+			return nil, nil, errors.New("invalid role provided")
+		}
+		user.Role = *role
+	}
+
+	userData.UpdatedAt = time.Now()
+	user.UpdatedAt = time.Now()
+
+	// Save updates
+	err = s.repo.Update(ctx, user, userData)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return user, userData, nil
+}
+
+// DeleteUser deletes a user (admin function).
+func (s *Service) DeleteUser(ctx context.Context, userID string) error {
+	// Check if user exists
+	exists, err := s.repo.Exists(ctx, userID)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return errors.New("user not found")
+	}
+
+	err = s.repo.Delete(ctx, userID)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

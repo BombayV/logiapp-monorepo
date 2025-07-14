@@ -13,7 +13,7 @@ import (
 )
 
 // SetupRouter configures the Gin router with all the necessary routes and middleware.
-func SetupRouter(db *database.DB, redisCache *cache.Cache, userHandler *handlers.UserHandler) *gin.Engine {
+func SetupRouter(db *database.DB, redisCache *cache.Cache, userHandler *handlers.UserHandler, orderHandler *handlers.OrderHandler) *gin.Engine {
 	gin.SetMode(config.App.GinMode)
 	router := gin.Default()
 	if config.App.TrustedProxy != "" {
@@ -47,6 +47,12 @@ func SetupRouter(db *database.DB, redisCache *cache.Cache, userHandler *handlers
 		v1.GET("/test-revoked-token", middleware.AuthMiddleware([]string{}), func(c *gin.Context) {
 			c.JSON(200, gin.H{"message": "Access granted: Token is valid and not revoked."})
 		})
+
+		orders := v1.Group("/orders")
+		{
+			orders.GET("/", middleware.AuthMiddleware([]string{"sales", "admin"}), orderHandler.GetAllOrders)
+			orders.POST("/", orderHandler.CreateOrder)
+		}
 	}
 
 	return router

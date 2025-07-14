@@ -7,7 +7,7 @@ pages_build_output_dir = ".svelte-kit/cloudflare"
 
 # Default environment variables
 [vars]
-BACKEND_URL = "https://spatial-rosmunda-bombay-e0c7d398.koyeb.app"
+BACKEND_URL = "http://localhost:8080" # Default to local backend URL
 
 # Environment variables (add your own as needed)
 [env.production.vars]

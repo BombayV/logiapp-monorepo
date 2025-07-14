@@ -23,6 +23,7 @@ export const actions: Actions = {
 				},
 				body: JSON.stringify({ email, password }) // Adjust body to match Go backend expectations
 			});
+			console.log(BACKEND_URL)
 
 			if (!response.ok) {
 				const errorData = await response

@@ -7,17 +7,14 @@
 		class: className,
 		children,
 		...restProps
-	}: WithElementRef<HTMLAttributes<HTMLTableRowElement>> = $props();
+	}: WithElementRef<HTMLAttributes<HTMLDivElement>> = $props();
 </script>
 
-<tr
+<div
 	bind:this={ref}
-	data-slot="table-row"
-	class={cn(
-		"hover:[&,&>svelte-css-wrapper]:[&>th,td]:bg-muted/50 data-[state=selected]:bg-muted border-b transition-colors",
-		className
-	)}
+	data-slot="dialog-footer"
+	class={cn("flex flex-col-reverse gap-2 sm:flex-row sm:justify-end", className)}
 	{...restProps}
 >
 	{@render children?.()}
-</tr>
+</div>

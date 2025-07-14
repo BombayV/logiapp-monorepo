@@ -1,38 +1,103 @@
 <script lang="ts">
 	import type { PageData } from './$types';
+	import { buttonVariants, Button } from '@/components/ui/button';
+	import * as Dialog from '@/components/ui/dialog';
+	import { Label } from '@/components/ui/label';
+	import { Input } from '@/components/ui/input';
 	export let data: PageData;
+
+	type Status = 'pending' | 'in_progress' | 'completed' | 'cancelled';
+
+	type Order = {
+		order_id: string;
+		created_by: string;
+		assigned_to: string;
+		address: string;
+		status: Status;
+		created_at: string;
+		updated_at: string;
+	};
+
+	type OrderItem = {
+		item_id: string;
+		order_id: string;
+		product_name: string;
+		quantity: number;
+		created_at: string;
+		updated_at: string;
+	}
+
+	const invoices = [
+		{
+			order_id: 'uuid-1234',
+			created_by: 'me@bombayv.com',
+			assigned_to: '',
+			address: 'Guayacanes & Los Cipreses, Rumiñahui, Pichincha, 171101',
+			status: 'pending',
+			created_at: '2023-10-01T12:00:00Z',
+			updated_at: '2023-10-01T12:00:00Z'
+		}
+
+	]
 </script>
 
 <div class="min-h-screen bg-gray-50 p-8">
 	<div class="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-6">
 		<div class="flex justify-between items-center mb-6">
-			<h1 class="text-3xl font-bold text-gray-800">Dashboard</h1>
+			<h1 class="text-3xl font-bold text-gray-800">Salpicadero</h1>
 			<form method="POST" action="?/logout">
 				<button
 					type="submit"
 					class="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
 				>
-					Logout
+					Cerrar sesión
 				</button>
 			</form>
 		</div>
 
 		<div class="bg-indigo-50 p-4 rounded-lg">
-			<h2 class="text-xl font-semibold text-gray-700 mb-2">
-				Bienvenue, {data.user.profile?.first_name}!
+			<h2 class="text-xl font-semibold text-gray-700">
+				Bienvenido, {data.user.profile?.first_name} {data.user.profile?.last_name}!
 			</h2>
 			<p class="text-gray-600">
-				Your role is: <span class="font-mono bg-gray-200 text-gray-800 px-2 py-1 rounded-md"
+				Su rol es: <span class="font-mono bg-gray-200 text-gray-800 px-2 py-1 rounded-md"
 					>{data.user.role}</span
 				>
 			</p>
 		</div>
 
-		<div class="mt-6">
-			<h3 class="text-lg font-semibold text-gray-700">Session Information</h3>
-			<pre class="bg-gray-100 p-4 rounded-md mt-2 overflow-x-auto text-sm"><code
-					>{JSON.stringify(data, null, 2)}</code
-				></pre>
+		<div class="mt-6 flex flex-col">
+			<div class="flex items-center justify-between">
+				<h3 class="text-lg font-semibold text-gray-700">Ordenes recientes</h3>
+				<Dialog.Root>
+					<Dialog.Trigger class={buttonVariants({ variant: "outline" })}
+						>Crear orden</Dialog.Trigger
+					>
+					<Dialog.Content class="sm:max-w-[425px]">
+						<form method="POST" action="?/create_order" class="space-y-4">
+							<Dialog.Header>
+								<Dialog.Title>Crear Orden</Dialog.Title>
+								<Dialog.Description>
+									Complete los detalles de la orden a continuación.
+								</Dialog.Description>
+							</Dialog.Header>
+							<div class="grid gap-4 py-4">
+								<div class="grid grid-cols-4 items-center gap-4">
+									<Label for="email" class="text-right">Email</Label>
+									<Input id="email" value={data.user.user} class="col-span-3" disabled />
+								</div>
+								<div class="grid grid-cols-4 items-center gap-4">
+									<Label for="address" class="text-right">Dirección</Label>
+									<Input id="address" name="address" class="col-span-3" placeholder="Guayacanes & Los Cipreses, Rumiñahui, Pichincha, 171101" />
+								</div>
+							</div>
+							<Dialog.Footer>
+								<Button type="submit">Crear Orden</Button>
+							</Dialog.Footer>
+						</form>
+					</Dialog.Content>
+				</Dialog.Root>
+			</div>
 		</div>
 	</div>
 </div>
