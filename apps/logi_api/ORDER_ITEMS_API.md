@@ -10,7 +10,7 @@ The Order Items functionality has been fully implemented with comprehensive CRUD
 
 #### 1. Add Single Item to Order
 ```
-POST /v1/orders/{order_id}/items
+POST /v1/orders/{id}/items
 ```
 **Authentication**: Required (sales role)
 
@@ -36,7 +36,7 @@ POST /v1/orders/{order_id}/items
 
 #### 2. Add Multiple Items to Order (Bulk)
 ```
-POST /v1/orders/{order_id}/items/bulk
+POST /v1/orders/{id}/items/bulk
 ```
 **Authentication**: Required (sales role)
 
@@ -83,7 +83,7 @@ POST /v1/orders/{order_id}/items/bulk
 
 #### 3. Get All Items for an Order
 ```
-GET /v1/orders/{order_id}/items
+GET /v1/orders/{id}/items
 ```
 **Authentication**: Required (sales role)
 
@@ -106,7 +106,7 @@ GET /v1/orders/{order_id}/items
 
 #### 4. Update Order Item
 ```
-PUT /v1/orders/{order_id}/items/{item_id}
+PUT /v1/orders/{id}/items/{item_id}
 ```
 **Authentication**: Required (sales role)
 
@@ -132,7 +132,7 @@ PUT /v1/orders/{order_id}/items/{item_id}
 
 #### 5. Delete Order Item
 ```
-DELETE /v1/orders/{order_id}/items/{item_id}
+DELETE /v1/orders/{id}/items/{item_id}
 ```
 **Authentication**: Required (sales role)
 
@@ -269,11 +269,11 @@ curl -X POST /v1/orders \
   -d '{"email": "user@example.com", "address": "123 Main St"}'
 
 # 2. Add items (bulk)
-curl -X POST /v1/orders/{order_id}/items/bulk \
+curl -X POST /v1/orders/{id}/items/bulk \
   -H "Authorization: Bearer <token>" \
   -d '{"items": [{"product_name": "Product A", "quantity": 3}]}'
 
 # 3. Get order with items
-curl -X GET /v1/orders/{order_id} \
+curl -X GET /v1/orders/{id} \
   -H "Authorization: Bearer <token>"
 ```
