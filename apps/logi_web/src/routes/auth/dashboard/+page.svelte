@@ -25,7 +25,7 @@
 		quantity: number;
 		created_at: string;
 		updated_at: string;
-	}
+	};
 
 	const invoices = [
 		{
@@ -37,14 +37,21 @@
 			created_at: '2023-10-01T12:00:00Z',
 			updated_at: '2023-10-01T12:00:00Z'
 		}
-
-	]
+	];
 </script>
+
+<svelte:head>
+	<title>LogiApp | Panel de control</title>
+	<meta
+		name="description"
+		content="Bienvenido a tu panel de control en LogiApp. Aquí puedes gestionar tus órdenes y ver tu información de usuario."
+	/>
+</svelte:head>
 
 <div class="min-h-screen bg-gray-50 p-8">
 	<div class="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-6">
 		<div class="flex justify-between items-center mb-6">
-			<h1 class="text-3xl font-bold text-gray-800">Salpicadero</h1>
+			<h1 class="text-3xl font-bold text-gray-800">Panel de control</h1>
 			<form method="POST" action="?/logout">
 				<button
 					type="submit"
@@ -57,7 +64,8 @@
 
 		<div class="bg-indigo-50 p-4 rounded-lg">
 			<h2 class="text-xl font-semibold text-gray-700">
-				Bienvenido, {data.user.profile?.first_name} {data.user.profile?.last_name}!
+				Bienvenido, {data.user.profile?.first_name}
+				{data.user.profile?.last_name}!
 			</h2>
 			<p class="text-gray-600">
 				Su rol es: <span class="font-mono bg-gray-200 text-gray-800 px-2 py-1 rounded-md"
@@ -70,8 +78,7 @@
 			<div class="flex items-center justify-between">
 				<h3 class="text-lg font-semibold text-gray-700">Ordenes recientes</h3>
 				<Dialog.Root>
-					<Dialog.Trigger class={buttonVariants({ variant: "outline" })}
-						>Crear orden</Dialog.Trigger
+					<Dialog.Trigger class={buttonVariants({ variant: 'outline' })}>Crear orden</Dialog.Trigger
 					>
 					<Dialog.Content class="sm:max-w-[425px]">
 						<form method="POST" action="?/create_order" class="space-y-4">
@@ -88,7 +95,12 @@
 								</div>
 								<div class="grid grid-cols-4 items-center gap-4">
 									<Label for="address" class="text-right">Dirección</Label>
-									<Input id="address" name="address" class="col-span-3" placeholder="Guayacanes & Los Cipreses, Rumiñahui, Pichincha, 171101" />
+									<Input
+										id="address"
+										name="address"
+										class="col-span-3"
+										placeholder="Guayacanes & Los Cipreses, Rumiñahui, Pichincha, 171101"
+									/>
 								</div>
 							</div>
 							<Dialog.Footer>

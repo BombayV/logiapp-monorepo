@@ -17,6 +17,11 @@
 	let password = '';
 </script>
 
+<svelte:head>
+	<title>LogiApp | Iniciar sesión</title>
+	<meta name="description" content="Inicia sesión para acceder a tu cuenta." />
+</svelte:head>
+
 <div class="flex items-center justify-center min-h-screen">
 	<Card class="w-full max-w-sm">
 		<form action="?/login" method="post">

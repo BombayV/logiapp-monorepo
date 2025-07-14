@@ -20,4 +20,3 @@ export const session = writable<Session>({
 export const updateSession = (userData: User | null) => {
 	session.set({ user: userData });
 };
-

@@ -48,7 +48,7 @@ export const actions: Actions = {
 		const formData = await event.request.formData();
 		const orderDetails = {
 			address: formData.get('address'),
-			email: formData.get('email'),
+			email: formData.get('email')
 		};
 
 		try {
@@ -66,7 +66,9 @@ export const actions: Actions = {
 			);
 
 			if (!response.ok) {
-				const errorData = await response.json().catch(() => ({ message: 'Order creation failed.' }));
+				const errorData = await response
+					.json()
+					.catch(() => ({ message: 'Order creation failed.' }));
 				return fail(response.status, { error: errorData.error || 'Order creation failed.' });
 			}
 

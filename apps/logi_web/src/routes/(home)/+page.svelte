@@ -6,6 +6,15 @@
 	export let data: PageData;
 </script>
 
+<svelte:head>
+	<title>LogiApp | Plataforma de Logística</title>
+	<meta
+		name="description"
+		content="Bienvenido a LogiApp, la plataforma de logística que te ayuda a gestionar tus envíos de manera eficiente y efectiva.
+			Desde la planificación hasta la entrega, LogiApp te ofrece herramientas para optimizar tu cadena de suministro y mejorar la experiencia del cliente."
+	/>
+</svelte:head>
+
 <header class="flex items-center justify-between p-4 border-b bg-background">
 	<a href="/" class="flex items-center space-x-2">
 		<img src="/favicon/favicon-32x32.png" alt="LogiApp Logo" width={32} height={32} />
