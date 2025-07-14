@@ -53,6 +53,54 @@ func (r *OrderRepository) FindByID(ctx context.Context, orderID string) (*orders
 	return &o, nil
 }
 
+// FindByIDWithItems finds an order by its ID including all order items
+func (r *OrderRepository) FindByIDWithItems(ctx context.Context, orderID string) (*orders.Order, error) {
+	// First get the order
+	order, err := r.FindByID(ctx, orderID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Then get the order items
+	items, err := r.FindItemsByOrderID(ctx, orderID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch order items: %w", err)
+	}
+
+	order.Items = items
+	return order, nil
+}
+
+// FindItemsByOrderID finds all items for a specific order
+func (r *OrderRepository) FindItemsByOrderID(ctx context.Context, orderID string) ([]orders.OrderItem, error) {
+	query := `
+		SELECT item_id, order_id, product_name, quantity, created_at, updated_at
+		FROM order_items
+		WHERE order_id = $1
+		ORDER BY created_at ASC
+	`
+	rows, err := r.db.Pool.Query(ctx, query, orderID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var items []orders.OrderItem
+	for rows.Next() {
+		var item orders.OrderItem
+		if err := rows.Scan(&item.ItemID, &item.OrderID, &item.ProductName, &item.Quantity, &item.CreatedAt, &item.UpdatedAt); err != nil {
+			return nil, fmt.Errorf("failed to scan order item: %w", err)
+		}
+		items = append(items, item)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("row iteration error: %w", err)
+	}
+
+	return items, nil
+}
+
 // FindByUserID finds all orders for a specific user
 func (r *OrderRepository) FindByUserID(ctx context.Context, userID string) ([]*orders.Order, error) {
 	query := `
@@ -148,4 +196,85 @@ func (r *OrderRepository) findOrdersWithQuery(ctx context.Context, query string,
 	}
 
 	return ordersList, nil
+}
+
+// ============ Order Items Repository Methods ============
+
+// SaveOrderItem saves a single order item to the database
+func (r *OrderRepository) SaveOrderItem(ctx context.Context, item *orders.OrderItem) error {
+	query := `
+		INSERT INTO order_items (item_id, order_id, product_name, quantity, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6)
+	`
+	_, err := r.db.Pool.Exec(ctx, query, item.ItemID, item.OrderID, item.ProductName, item.Quantity, item.CreatedAt, item.UpdatedAt)
+	return err
+}
+
+// SaveOrderItems saves multiple order items to the database in a single transaction
+func (r *OrderRepository) SaveOrderItems(ctx context.Context, items []orders.OrderItem) error {
+	if len(items) == 0 {
+		return nil
+	}
+
+	tx, err := r.db.Pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	query := `
+		INSERT INTO order_items (item_id, order_id, product_name, quantity, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6)
+	`
+
+	for _, item := range items {
+		_, err := tx.Exec(ctx, query, item.ItemID, item.OrderID, item.ProductName, item.Quantity, item.CreatedAt, item.UpdatedAt)
+		if err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit(ctx)
+}
+
+// FindOrderItemByID finds a specific order item by its ID
+func (r *OrderRepository) FindOrderItemByID(ctx context.Context, itemID string) (*orders.OrderItem, error) {
+	query := `
+		SELECT item_id, order_id, product_name, quantity, created_at, updated_at
+		FROM order_items
+		WHERE item_id = $1
+	`
+	var item orders.OrderItem
+	err := r.db.Pool.QueryRow(ctx, query, itemID).Scan(
+		&item.ItemID, &item.OrderID, &item.ProductName, &item.Quantity, &item.CreatedAt, &item.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &item, nil
+}
+
+// UpdateOrderItem updates an existing order item
+func (r *OrderRepository) UpdateOrderItem(ctx context.Context, item *orders.OrderItem) error {
+	query := `
+		UPDATE order_items 
+		SET product_name = $2, quantity = $3, updated_at = $4
+		WHERE item_id = $1
+	`
+	_, err := r.db.Pool.Exec(ctx, query, item.ItemID, item.ProductName, item.Quantity, item.UpdatedAt)
+	return err
+}
+
+// DeleteOrderItem deletes a specific order item
+func (r *OrderRepository) DeleteOrderItem(ctx context.Context, itemID string) error {
+	query := `DELETE FROM order_items WHERE item_id = $1`
+	_, err := r.db.Pool.Exec(ctx, query, itemID)
+	return err
+}
+
+// DeleteOrderItemsByOrderID deletes all items for a specific order
+func (r *OrderRepository) DeleteOrderItemsByOrderID(ctx context.Context, orderID string) error {
+	query := `DELETE FROM order_items WHERE order_id = $1`
+	_, err := r.db.Pool.Exec(ctx, query, orderID)
+	return err
 }

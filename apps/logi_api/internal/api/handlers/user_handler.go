@@ -162,12 +162,6 @@ func (h *UserHandler) Me(c *gin.Context) {
 // GetUsers returns all users with pagination (admin only)
 func (h *UserHandler) GetUsers(c *gin.Context) {
 	// Check if user is admin (this would typically be done by middleware)
-	role, exists := c.Get("userRole")
-	if !exists || role != "admin" {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Insufficient permissions"})
-		return
-	}
-
 	limitStr := c.DefaultQuery("limit", "10")
 	offsetStr := c.DefaultQuery("offset", "0")
 
@@ -200,12 +194,6 @@ func (h *UserHandler) GetUsers(c *gin.Context) {
 // GetUserByID returns a specific user by ID (admin only)
 func (h *UserHandler) GetUserByID(c *gin.Context) {
 	// Check if user is admin (this would typically be done by middleware)
-	role, exists := c.Get("userRole")
-	if !exists || role != "admin" {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Insufficient permissions"})
-		return
-	}
-
 	userID := c.Param("id")
 	if userID == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "User ID is required"})
@@ -236,118 +224,8 @@ func (h *UserHandler) GetUserByID(c *gin.Context) {
 	})
 }
 
-// GetUsersByRole returns users filtered by role (admin only)
-func (h *UserHandler) GetUsersByRole(c *gin.Context) {
-	// Check if user is admin (this would typically be done by middleware)
-	role, exists := c.Get("userRole")
-	if !exists || role != "admin" {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Insufficient permissions"})
-		return
-	}
-
-	targetRole := c.Param("role")
-	if targetRole == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Role is required"})
-		return
-	}
-
-	// Validate role
-	validRoles := map[string]bool{
-		"admin":  true,
-		"driver": true,
-		"sales":  true,
-	}
-
-	if !validRoles[targetRole] {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid role. Allowed values: admin, driver, sales"})
-		return
-	}
-
-	users, err := h.UserService.GetUsersByRole(c.Request.Context(), targetRole)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"users": users,
-		"total": len(users),
-		"role":  targetRole,
-	})
-}
-
-// UpdateUser updates user information
-func (h *UserHandler) UpdateUser(c *gin.Context) {
-	userID := c.Param("id")
-	if userID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "User ID is required"})
-		return
-	}
-
-	// Check if user is updating their own profile or is admin
-	currentUserID, exists := c.Get("userID")
-	currentUserRole, roleExists := c.Get("userRole")
-
-	if !exists || (!roleExists || currentUserRole != "admin") && currentUserID != userID {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Insufficient permissions"})
-		return
-	}
-
-	var req UpdateUserRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	// Validate role if provided (only admin can change roles)
-	if req.Role != nil && currentUserRole != "admin" {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Only admins can change user roles"})
-		return
-	}
-
-	if req.Role != nil {
-		validRoles := map[string]bool{
-			"admin":  true,
-			"driver": true,
-			"sales":  true,
-		}
-
-		if !validRoles[*req.Role] {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid role. Allowed values: admin, driver, sales"})
-			return
-		}
-	}
-
-	user, userData, err := h.UserService.UpdateUserProfile(c.Request.Context(), userID, req.FirstName, req.LastName, req.Phone, req.Role)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"message": "User updated successfully",
-		"user": gin.H{
-			"user_id": user.UserID,
-			"email":   user.Email,
-			"role":    user.Role,
-		},
-		"profile": gin.H{
-			"first_name":   userData.FirstName,
-			"last_name":    userData.LastName,
-			"phone_number": userData.PhoneNumber,
-		},
-	})
-}
-
 // DeleteUser deletes a user (admin only)
 func (h *UserHandler) DeleteUser(c *gin.Context) {
-	// Check if user is admin
-	role, exists := c.Get("userRole")
-	if !exists || role != "admin" {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Insufficient permissions"})
-		return
-	}
-
 	userID := c.Param("id")
 	if userID == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "User ID is required"})

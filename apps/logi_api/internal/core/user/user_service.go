@@ -13,7 +13,7 @@ import (
 var (
 	ErrInvalidCredentials = errors.New("missing or invalid credentials")
 	ErrPasswordTooWeak    = errors.New("password must be at least 8 characters long")
-	ErrForbidden          = errors.New("forbidden: insufficient permissions")
+	ErrForbidden          = errors.New("forbidden: Insufficient permissions")
 	ErrEmailExists        = errors.New("email address is already in use")
 	ErrCouldNotSaveUser   = errors.New("could not save user to the database")
 	ErrInvalidToken       = errors.New("invalid or expired token")

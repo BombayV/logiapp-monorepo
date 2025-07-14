@@ -92,7 +92,7 @@ func (m *Manager) createOrderTx(ctx context.Context, tx pgx.Tx, userID, address 
 	order := &orders.Order{
 		OrderID:         orderID,
 		CreatedBy:       userID,
-		AssignedTo:      "",
+		AssignedTo:      nil,
 		DeliveryAddress: address,
 		Status:          "pending",
 		CreatedAt:       now,
