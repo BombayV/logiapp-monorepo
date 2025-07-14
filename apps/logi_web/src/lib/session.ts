@@ -2,8 +2,8 @@ import { writable } from 'svelte/store';
 
 // Define the shape of the user object
 interface User {
-	username: string;
-	role: 'sales' | 'admin' | 'driver' | null;
+	role?: string;
+	token?: string;
 }
 
 // Define the shape of the session
@@ -15,3 +15,8 @@ interface Session {
 export const session = writable<Session>({
 	user: null
 });
+
+// Function to update the session
+export const updateSession = (userData: User | null) => {
+	session.set({ user: userData });
+};

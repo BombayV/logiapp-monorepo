@@ -28,7 +28,6 @@ func AuthMiddleware(role []string) gin.HandlerFunc {
 
 		// Remove "Bearer " prefix
 		tokenString = tokenString[len("Bearer "):]
-
 		token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
 			return []byte(config.App.JWTSecret), nil
 		})
@@ -62,7 +61,7 @@ func AuthMiddleware(role []string) gin.HandlerFunc {
 			c.Set("userID", claims.UserID)
 			c.Set("role", claims.Role)
 			// Check if the user is admin or if the role is allowed
-			if claims.Role != "admin" && len(role) > 0 && !slices.Contains(role, claims.Role) {
+			if !slices.Contains(role, claims.Role) && claims.Role != "admin" {
 				c.JSON(http.StatusForbidden, gin.H{"error": "Forbidden: insufficient permissions"})
 				c.Abort()
 				return

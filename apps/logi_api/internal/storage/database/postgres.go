@@ -4,6 +4,8 @@ import (
 	"context"
 	"log"
 
+	"github.com/jackc/pgconn"
+	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
@@ -26,4 +28,22 @@ func NewDatabase(connectionString string) (*DB, error) {
 // Close closes the database connection pool.
 func (db *DB) Close() {
 	db.Pool.Close()
+}
+
+// Executor interface methods - delegate to the pool
+func (db *DB) Query(ctx context.Context, sql string, args ...interface{}) (pgx.Rows, error) {
+	return db.Pool.Query(ctx, sql, args...)
+}
+
+func (db *DB) QueryRow(ctx context.Context, sql string, args ...interface{}) pgx.Row {
+	return db.Pool.QueryRow(ctx, sql, args...)
+}
+
+func (db *DB) Exec(ctx context.Context, sql string, arguments ...interface{}) (pgconn.CommandTag, error) {
+	return db.Pool.Exec(ctx, sql, arguments...)
+}
+
+// Transactor interface methods - delegate to the pool
+func (db *DB) Begin(ctx context.Context) (pgx.Tx, error) {
+	return db.Pool.Begin(ctx)
 }

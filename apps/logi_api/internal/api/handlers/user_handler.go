@@ -4,6 +4,7 @@ import (
 	"bombayv/logiapp-monorepo/logi_api/internal/core/user"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -27,6 +28,13 @@ type RegisterUserRequest struct {
 	Role      string `json:"role" binding:"required"`
 }
 
+type UpdateUserRequest struct {
+	FirstName *string `json:"first_name,omitempty"`
+	LastName  *string `json:"last_name,omitempty"`
+	Phone     *string `json:"phone,omitempty"`
+	Role      *string `json:"role,omitempty"`
+}
+
 // RegisterUser handles new user registration.
 func (h *UserHandler) RegisterUser(c *gin.Context) {
 	var request RegisterUserRequest
@@ -35,6 +43,18 @@ func (h *UserHandler) RegisterUser(c *gin.Context) {
 			"error": "Invalid request body",
 		})
 		fmt.Println("Error binding request body:", err)
+		return
+	}
+
+	// Validate role against allowed values from schema
+	validRoles := map[string]bool{
+		"admin":  true,
+		"driver": true,
+		"sales":  true,
+	}
+
+	if !validRoles[request.Role] {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid role. Allowed values: admin, driver, sales"})
 		return
 	}
 
@@ -137,4 +157,86 @@ func (h *UserHandler) Me(c *gin.Context) {
 			"phone_number": userData.PhoneNumber,
 		},
 	})
+}
+
+// GetUsers returns all users with pagination (admin only)
+func (h *UserHandler) GetUsers(c *gin.Context) {
+	// Check if user is admin (this would typically be done by middleware)
+	limitStr := c.DefaultQuery("limit", "10")
+	offsetStr := c.DefaultQuery("offset", "0")
+
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil || limit <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid limit parameter"})
+		return
+	}
+
+	offset, err := strconv.Atoi(offsetStr)
+	if err != nil || offset < 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid offset parameter"})
+		return
+	}
+
+	users, total, err := h.UserService.GetAllUsers(c.Request.Context(), limit, offset)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"users":  users,
+		"total":  total,
+		"limit":  limit,
+		"offset": offset,
+	})
+}
+
+// GetUserByID returns a specific user by ID (admin only)
+func (h *UserHandler) GetUserByID(c *gin.Context) {
+	// Check if user is admin (this would typically be done by middleware)
+	userID := c.Param("id")
+	if userID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "User ID is required"})
+		return
+	}
+
+	user, userData, err := h.UserService.GetUserProfile(c.Request.Context(), userID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+
+	// Return full user profile for admin
+	c.JSON(http.StatusOK, gin.H{
+		"user": gin.H{
+			"user_id":    user.UserID,
+			"email":      user.Email,
+			"role":       user.Role,
+			"created_at": user.CreatedAt,
+			"updated_at": user.UpdatedAt,
+		},
+		"profile": gin.H{
+			"first_name":      userData.FirstName,
+			"last_name":       userData.LastName,
+			"phone_number":    userData.PhoneNumber,
+			"last_connection": userData.LastConnection,
+		},
+	})
+}
+
+// DeleteUser deletes a user (admin only)
+func (h *UserHandler) DeleteUser(c *gin.Context) {
+	userID := c.Param("id")
+	if userID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "User ID is required"})
+		return
+	}
+
+	err := h.UserService.DeleteUser(c.Request.Context(), userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "User deleted successfully"})
 }
