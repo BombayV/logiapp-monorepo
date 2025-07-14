@@ -50,22 +50,17 @@ func SetupRouter(db *database.DB, redisCache *cache.Cache, userHandler *handlers
 
 		// Order routes (protected)
 		v1.POST("/orders", middleware.AuthMiddleware([]string{"sales"}), orderHandler.CreateOrder)
+		v1.GET("/orders", middleware.AuthMiddleware([]string{"sales", "admin"}), orderHandler.GetAllOrders)
 		v1.GET("/orders/:id", middleware.AuthMiddleware([]string{"sales"}), orderHandler.GetOrderByID)
 		v1.PUT("/orders/:id", middleware.AuthMiddleware([]string{"sales"}), orderHandler.UpdateOrder)
 		v1.DELETE("/orders/:id", middleware.AuthMiddleware([]string{"sales"}), orderHandler.DeleteOrder)
 
-		// Order items routes
-		v1.POST("/orders/:order_id/items", middleware.AuthMiddleware([]string{"sales"}), orderHandler.AddOrderItem)
-		v1.POST("/orders/:order_id/items/bulk", middleware.AuthMiddleware([]string{"sales"}), orderHandler.AddOrderItems)
-		v1.GET("/orders/:order_id/items", middleware.AuthMiddleware([]string{"sales"}), orderHandler.GetOrderItems)
-		v1.PUT("/orders/:order_id/items/:item_id", middleware.AuthMiddleware([]string{"sales"}), orderHandler.UpdateOrderItem)
-		v1.DELETE("/orders/:order_id/items/:item_id", middleware.AuthMiddleware([]string{"sales"}), orderHandler.DeleteOrderItem)
-
-		orders := v1.Group("/orders")
-		{
-			orders.GET("/", middleware.AuthMiddleware([]string{"sales", "admin"}), orderHandler.GetAllOrders)
-			orders.POST("/", orderHandler.CreateOrder)
-		}
+		// Order items routes (must be defined after specific order routes)
+		v1.POST("/orders/:id/items", middleware.AuthMiddleware([]string{"sales"}), orderHandler.AddOrderItem)
+		v1.POST("/orders/:id/items/bulk", middleware.AuthMiddleware([]string{"sales"}), orderHandler.AddOrderItems)
+		v1.GET("/orders/:id/items", middleware.AuthMiddleware([]string{"sales"}), orderHandler.GetOrderItems)
+		v1.PUT("/orders/:id/items/:item_id", middleware.AuthMiddleware([]string{"sales"}), orderHandler.UpdateOrderItem)
+		v1.DELETE("/orders/:id/items/:item_id", middleware.AuthMiddleware([]string{"sales"}), orderHandler.DeleteOrderItem)
 	}
 
 	return router
