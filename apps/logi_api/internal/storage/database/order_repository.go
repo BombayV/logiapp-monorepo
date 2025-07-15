@@ -23,28 +23,28 @@ func NewOrderRepository(db *DB) *OrderRepository {
 // Save saves an order to the database.
 func (r *OrderRepository) Save(ctx context.Context, o *orders.Order) error {
 	query := `
-		INSERT INTO orders (order_id, created_by, assigned_to, delivery_address, status, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		INSERT INTO orders (order_id, order_number, created_by, assigned_to, delivery_address, status, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 	`
-	_, err := r.db.Pool.Exec(ctx, query, o.OrderID, o.CreatedBy, o.AssignedTo, o.DeliveryAddress, o.Status, o.CreatedAt, o.UpdatedAt)
+	_, err := r.db.Pool.Exec(ctx, query, o.OrderID, o.OrderNumber, o.CreatedBy, o.AssignedTo, o.DeliveryAddress, o.Status, o.CreatedAt, o.UpdatedAt)
 	return err
 }
 
 // FindAll returns all orders
 func (r *OrderRepository) FindAll(ctx context.Context) ([]*orders.Order, error) {
-	return r.findOrdersWithQuery(ctx, "SELECT order_id, created_by, assigned_to, delivery_address, status, created_at, updated_at FROM orders ORDER BY created_at DESC")
+	return r.findOrdersWithQuery(ctx, "SELECT order_id, order_number, created_by, assigned_to, delivery_address, status, created_at, updated_at FROM orders ORDER BY created_at DESC")
 }
 
 // FindByID finds an order by its ID
 func (r *OrderRepository) FindByID(ctx context.Context, orderID string) (*orders.Order, error) {
 	query := `
-		SELECT order_id, created_by, assigned_to, delivery_address, status, created_at, updated_at
+		SELECT order_id, order_number, created_by, assigned_to, delivery_address, status, created_at, updated_at
 		FROM orders
 		WHERE order_id = $1
 	`
 	var o orders.Order
 	err := r.db.Pool.QueryRow(ctx, query, orderID).Scan(
-		&o.OrderID, &o.CreatedBy, &o.AssignedTo, &o.DeliveryAddress,
+		&o.OrderID, &o.OrderNumber, &o.CreatedBy, &o.AssignedTo, &o.DeliveryAddress,
 		&o.Status, &o.CreatedAt, &o.UpdatedAt,
 	)
 	if err != nil {
@@ -104,7 +104,7 @@ func (r *OrderRepository) FindItemsByOrderID(ctx context.Context, orderID string
 // FindByUserID finds all orders for a specific user
 func (r *OrderRepository) FindByUserID(ctx context.Context, userID string) ([]*orders.Order, error) {
 	query := `
-		SELECT order_id, created_by, assigned_to, delivery_address, status, created_at, updated_at
+		SELECT order_id, order_number, created_by, assigned_to, delivery_address, status, created_at, updated_at
 		FROM orders
 		WHERE created_by = $1
 		ORDER BY created_at DESC
@@ -115,7 +115,7 @@ func (r *OrderRepository) FindByUserID(ctx context.Context, userID string) ([]*o
 // FindByStatus finds all orders with a specific status
 func (r *OrderRepository) FindByStatus(ctx context.Context, status string) ([]*orders.Order, error) {
 	query := `
-		SELECT order_id, created_by, assigned_to, delivery_address, status, created_at, updated_at
+		SELECT order_id, order_number, created_by, assigned_to, delivery_address, status, created_at, updated_at
 		FROM orders
 		WHERE status = $1
 		ORDER BY created_at DESC
@@ -133,7 +133,7 @@ func (r *OrderRepository) FindWithPagination(ctx context.Context, limit, offset 
 
 	// Get paginated results
 	query := `
-		SELECT order_id, created_by, assigned_to, delivery_address, status, created_at, updated_at
+		SELECT order_id, order_number, created_by, assigned_to, delivery_address, status, created_at, updated_at
 		FROM orders
 		ORDER BY created_at DESC
 		LIMIT $1 OFFSET $2
@@ -185,7 +185,7 @@ func (r *OrderRepository) findOrdersWithQuery(ctx context.Context, query string,
 	var ordersList []*orders.Order
 	for rows.Next() {
 		var o orders.Order
-		if err := rows.Scan(&o.OrderID, &o.CreatedBy, &o.AssignedTo, &o.DeliveryAddress, &o.Status, &o.CreatedAt, &o.UpdatedAt); err != nil {
+		if err := rows.Scan(&o.OrderID, &o.OrderNumber, &o.CreatedBy, &o.AssignedTo, &o.DeliveryAddress, &o.Status, &o.CreatedAt, &o.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("failed to scan order: %w", err)
 		}
 		ordersList = append(ordersList, &o)

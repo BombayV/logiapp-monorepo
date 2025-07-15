@@ -23,7 +23,28 @@ type UserData struct {
 }
 
 type UserLocation struct {
-	UserID      string    `json:"user_id" gorm:"primaryKey;type:varchar(36)"`
-	Location    string    `json:"location" gorm:"type:geography(Point, 4326);not null"`
-	LastUpdated time.Time `json:"last_updated" gorm:"type:timestamp with time zone;default:current_timestamp"`
+	UserID    string    `json:"user_id" gorm:"primaryKey;type:varchar(36)"`
+	Location  string    `json:"location" gorm:"type:geometry(Point, 4326);not null"`
+	Latitude  float64   `json:"latitude" gorm:"-"`  // Not stored in DB, computed from Location
+	Longitude float64   `json:"longitude" gorm:"-"` // Not stored in DB, computed from Location
+	UpdatedAt time.Time `json:"updated_at" gorm:"type:timestamp with time zone;default:current_timestamp"`
+}
+
+// UserWithData combines User and UserData for operations that need both
+type UserWithData struct {
+	User     *User     `json:"user"`
+	UserData *UserData `json:"user_data"`
+}
+
+// DriverLocation represents a driver's basic info with location
+type DriverLocation struct {
+	UserID            string    `json:"user_id"`
+	Email             string    `json:"email"`
+	FirstName         string    `json:"first_name"`
+	LastName          string    `json:"last_name"`
+	PhoneNumber       string    `json:"phone_number"`
+	Latitude          float64   `json:"latitude"`
+	Longitude         float64   `json:"longitude"`
+	LastConnection    time.Time `json:"last_connection"`
+	LocationUpdatedAt time.Time `json:"location_updated_at"`
 }

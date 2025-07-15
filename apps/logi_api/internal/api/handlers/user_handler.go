@@ -115,8 +115,18 @@ func (h *UserHandler) Login(c *gin.Context) {
 // Logout handles user logout.
 func (h *UserHandler) Logout(c *gin.Context) {
 	tokenString := c.GetHeader("Authorization")
+	if tokenString == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Authorization header is required"})
+		return
+	}
+
 	// Remove "Bearer " prefix
-	tokenString = tokenString[len("Bearer "):]
+	const bearerPrefix = "Bearer "
+	if len(tokenString) < len(bearerPrefix) || tokenString[:len(bearerPrefix)] != bearerPrefix {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid authorization header format"})
+		return
+	}
+	tokenString = tokenString[len(bearerPrefix):]
 
 	err := h.UserService.Logout(c.Request.Context(), tokenString)
 	if err != nil {
@@ -149,12 +159,14 @@ func (h *UserHandler) Me(c *gin.Context) {
 
 	// Return user profile without sensitive information
 	c.JSON(http.StatusOK, gin.H{
-		"user": user.Email,
-		"role": user.Role,
+		"user_id": user.UserID,
+		"email":   user.Email,
+		"role":    user.Role,
 		"profile": gin.H{
-			"first_name":   userData.FirstName,
-			"last_name":    userData.LastName,
-			"phone_number": userData.PhoneNumber,
+			"first_name":      userData.FirstName,
+			"last_name":       userData.LastName,
+			"phone_number":    userData.PhoneNumber,
+			"last_connection": userData.LastConnection,
 		},
 	})
 }
@@ -162,7 +174,7 @@ func (h *UserHandler) Me(c *gin.Context) {
 // GetUsers returns all users with pagination (admin only)
 func (h *UserHandler) GetUsers(c *gin.Context) {
 	// Check if user is admin (this would typically be done by middleware)
-	limitStr := c.DefaultQuery("limit", "10")
+	limitStr := c.DefaultQuery("limit", "100")
 	offsetStr := c.DefaultQuery("offset", "0")
 
 	limit, err := strconv.Atoi(limitStr)
@@ -177,14 +189,36 @@ func (h *UserHandler) GetUsers(c *gin.Context) {
 		return
 	}
 
-	users, total, err := h.UserService.GetAllUsers(c.Request.Context(), limit, offset)
+	users, total, err := h.UserService.GetAllUsersWithData(c.Request.Context(), limit, offset)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
+	// Format the response to include user data
+	var formattedUsers []gin.H
+	for _, userWithData := range users {
+		userData := gin.H{
+			"user_id":    userWithData.User.UserID,
+			"email":      userWithData.User.Email,
+			"role":       userWithData.User.Role,
+			"created_at": userWithData.User.CreatedAt,
+			"updated_at": userWithData.User.UpdatedAt,
+		}
+
+		// Add user data if available
+		if userWithData.UserData != nil {
+			userData["first_name"] = userWithData.UserData.FirstName
+			userData["last_name"] = userWithData.UserData.LastName
+			userData["phone_number"] = userWithData.UserData.PhoneNumber
+			userData["last_connection"] = userWithData.UserData.LastConnection
+		}
+
+		formattedUsers = append(formattedUsers, userData)
+	}
+
 	c.JSON(http.StatusOK, gin.H{
-		"users":  users,
+		"users":  formattedUsers,
 		"total":  total,
 		"limit":  limit,
 		"offset": offset,
@@ -239,4 +273,128 @@ func (h *UserHandler) DeleteUser(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "User deleted successfully"})
+}
+
+// UpdateLocation handles location updates for drivers
+func (h *UserHandler) UpdateLocation(c *gin.Context) {
+	userID, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	userIDStr, ok := userID.(string)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	var request struct {
+		Latitude  float64 `json:"latitude" binding:"required"`
+		Longitude float64 `json:"longitude" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	err := h.UserService.UpdateLocation(c.Request.Context(), userIDStr, request.Latitude, request.Longitude)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Location updated successfully"})
+}
+
+// GetLocation handles location retrieval for drivers
+func (h *UserHandler) GetLocation(c *gin.Context) {
+	userID, exists := c.Get("userID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	userIDStr, ok := userID.(string)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	location, err := h.UserService.GetLocation(c.Request.Context(), userIDStr)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Location not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"latitude":   location.Latitude,
+		"longitude":  location.Longitude,
+		"updated_at": location.UpdatedAt,
+	})
+}
+
+// GetActiveDriversWithLocations returns all drivers who have been active in the last 10 minutes with their locations
+func (h *UserHandler) GetActiveDriversWithLocations(c *gin.Context) {
+	drivers, err := h.UserService.GetActiveDriversWithLocations(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve active drivers"})
+		return
+	}
+
+	// Ensure drivers is always an empty array instead of null
+	if drivers == nil {
+		drivers = []*user.DriverLocation{}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"drivers": drivers,
+		"count":   len(drivers),
+	})
+}
+
+type ResetPasswordRequest struct {
+	CurrentPassword string `json:"current_password" binding:"required"`
+	NewPassword     string `json:"new_password" binding:"required,min=8"`
+}
+
+// ResetPassword handles password reset requests
+func (h *UserHandler) ResetPassword(c *gin.Context) {
+	var request ResetPasswordRequest
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid request body",
+		})
+		return
+	}
+
+	// Get user ID from JWT token
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	userIDStr, ok := userID.(string)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID format"})
+		return
+	}
+
+	// Reset password
+	err := h.UserService.ResetPassword(c.Request.Context(), userIDStr, request.CurrentPassword, request.NewPassword)
+	if err != nil {
+		switch err {
+		case user.ErrInvalidCredentials:
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Current password is incorrect"})
+		case user.ErrPasswordTooWeak:
+			c.JSON(http.StatusBadRequest, gin.H{"error": "New password must be at least 8 characters long"})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to reset password"})
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Password reset successfully"})
 }

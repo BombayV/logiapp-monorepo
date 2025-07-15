@@ -30,7 +30,12 @@ func SetupRouter(db *database.DB, redisCache *cache.Cache, userHandler *handlers
 		c.Next()
 	})
 
-	router.GET("/status", handlers.Status)
+	// Create status handler
+	statusHandler := handlers.NewStatusHandler(db, redisCache)
+
+	// Status routes
+	router.GET("/status", statusHandler.Status)
+	router.GET("/health", statusHandler.Health)
 
 	// API v1 routes
 	v1 := router.Group("/v1")
@@ -41,6 +46,13 @@ func SetupRouter(db *database.DB, redisCache *cache.Cache, userHandler *handlers
 		v1.GET("/users/me", middleware.AuthMiddleware([]string{"sales", "driver"}), userHandler.Me)
 		v1.POST("/users/logout", middleware.AuthMiddleware([]string{"sales", "driver"}), userHandler.Logout)
 		v1.POST("/users/login", userHandler.Login)
+		v1.PUT("/users/reset-password", middleware.AuthMiddleware([]string{"sales", "driver"}), userHandler.ResetPassword)
+
+		// User location routes (driver only)
+		v1.PUT("/users/location", middleware.AuthMiddleware([]string{"driver"}), userHandler.UpdateLocation)
+		v1.GET("/users/location", middleware.AuthMiddleware([]string{"driver"}), userHandler.GetLocation)
+
+		v1.GET("/users/drivers/active", middleware.AuthMiddleware([]string{"sales"}), userHandler.GetActiveDriversWithLocations)
 
 		// Get all users (admin only)
 		v1.GET("/users", middleware.AuthMiddleware([]string{"sales"}), userHandler.GetUsers)

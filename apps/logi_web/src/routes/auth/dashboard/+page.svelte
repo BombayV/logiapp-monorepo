@@ -4,28 +4,10 @@
 	import * as Dialog from '@/components/ui/dialog';
 	import { Label } from '@/components/ui/label';
 	import { Input } from '@/components/ui/input';
+	import DataTable from '@/components/users/data-table.svelte';
+	import { columns, type User } from '@/components/users/columns';
 	export let data: PageData;
 
-	type Status = 'pending' | 'in_progress' | 'completed' | 'cancelled';
-
-	type Order = {
-		order_id: string;
-		created_by: string;
-		assigned_to: string;
-		address: string;
-		status: Status;
-		created_at: string;
-		updated_at: string;
-	};
-
-	type OrderItem = {
-		item_id: string;
-		order_id: string;
-		product_name: string;
-		quantity: number;
-		created_at: string;
-		updated_at: string;
-	};
 
 	const invoices = [
 		{
@@ -38,6 +20,8 @@
 			updated_at: '2023-10-01T12:00:00Z'
 		}
 	];
+
+	console.log(data.users)
 </script>
 
 <svelte:head>
@@ -76,6 +60,48 @@
 
 		<div class="mt-6 flex flex-col">
 			<div class="flex items-center justify-between">
+				<h3 class="text-lg font-semibold text-gray-700">Usuarios</h3>
+				<Dialog.Root>
+					<Dialog.Trigger class={buttonVariants({ variant: 'outline' })}>Crear usuario</Dialog.Trigger
+					>
+					<Dialog.Content class="sm:max-w-[425px]">
+						<form method="POST" action="?/create_user" class="space-y-4">
+							<Dialog.Header>
+								<Dialog.Title>Crear Usuario</Dialog.Title>
+								<Dialog.Description>
+									Complete los detalles del usuario a continuación.
+								</Dialog.Description>
+							</Dialog.Header>
+							<div class="grid gap-4 py-4">
+								<div class="grid grid-cols-4 items-center gap-4">
+									<Label for="email" class="text-right">Email</Label>
+									<Input id="email" class="col-span-3" placeholder="me@bombayv.com" />
+								</div>
+								<div class="grid grid-cols-4 items-center gap-4">
+									<Label for="password" class="text-right">Contraseña</Label>
+									<Input
+										id="password"
+										name="password"
+										class="col-span-3"
+										placeholder="********"
+										type="password"
+									/>
+								</div>
+							</div>
+							<Dialog.Footer>
+								<Button type="submit">Crear Usuario</Button>
+							</Dialog.Footer>
+						</form>
+					</Dialog.Content>
+				</Dialog.Root>
+			</div>
+			<div class="mt-4">
+				<DataTable data={data.users} {columns} columnVisibility={{ user_id: false }} />
+			</div>
+		</div>
+
+		<div class="mt-6 flex flex-col">
+			<div class="flex items-center justify-between">
 				<h3 class="text-lg font-semibold text-gray-700">Ordenes recientes</h3>
 				<Dialog.Root>
 					<Dialog.Trigger class={buttonVariants({ variant: 'outline' })}>Crear orden</Dialog.Trigger
@@ -109,6 +135,12 @@
 						</form>
 					</Dialog.Content>
 				</Dialog.Root>
+			</div>
+		</div>
+
+		<div class="mt-6 flex flex-col">
+			<div class="flex items-center justify-between">
+				<h3 class="text-lg font-semibold text-gray-700">Mapa de empleados</h3>
 			</div>
 		</div>
 	</div>

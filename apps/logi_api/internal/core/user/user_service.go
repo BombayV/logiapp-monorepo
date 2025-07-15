@@ -5,6 +5,7 @@ import (
 	"bombayv/logiapp-monorepo/logi_api/internal/utils"
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -117,6 +118,13 @@ func (s *Service) Logout(ctx context.Context, tokenString string) error {
 		return err
 	}
 
+	// Update the user's last_connection timestamp
+	if err := s.repo.UpdateLastConnection(ctx, claims.Subject); err != nil {
+		// Log the error but don't fail the logout process
+		// The token is already revoked, so the user is effectively logged out
+		return fmt.Errorf("failed to update last connection: %w", err)
+	}
+
 	return nil
 }
 
@@ -140,6 +148,16 @@ func (s *Service) GetAllUsers(ctx context.Context, limit, offset int) ([]*User, 
 	return users, total, nil
 }
 
+// GetAllUsersWithData retrieves all users with their profile data (admin function).
+func (s *Service) GetAllUsersWithData(ctx context.Context, limit, offset int) ([]*UserWithData, int, error) {
+	users, total, err := s.repo.FindAllWithData(ctx, limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return users, total, nil
+}
+
 // GetUsersByRole retrieves users filtered by role.
 func (s *Service) GetUsersByRole(ctx context.Context, role string) ([]*User, error) {
 	// Validate role
@@ -148,6 +166,21 @@ func (s *Service) GetUsersByRole(ctx context.Context, role string) ([]*User, err
 	}
 
 	users, err := s.repo.FindByRole(ctx, role)
+	if err != nil {
+		return nil, err
+	}
+
+	return users, nil
+}
+
+// GetUsersByRoleWithData retrieves users filtered by role with their profile data.
+func (s *Service) GetUsersByRoleWithData(ctx context.Context, role string) ([]*UserWithData, error) {
+	// Validate role
+	if role != "admin" && role != "driver" && role != "sales" {
+		return nil, errors.New("invalid role provided")
+	}
+
+	users, err := s.repo.FindByRoleWithData(ctx, role)
 	if err != nil {
 		return nil, err
 	}
@@ -207,6 +240,67 @@ func (s *Service) DeleteUser(ctx context.Context, userID string) error {
 	err = s.repo.Delete(ctx, userID)
 	if err != nil {
 		return err
+	}
+
+	return nil
+}
+
+// UpdateLocation updates a user's location
+func (s *Service) UpdateLocation(ctx context.Context, userID string, latitude, longitude float64) error {
+	// Validate latitude and longitude ranges
+	if latitude < -90 || latitude > 90 {
+		return fmt.Errorf("latitude must be between -90 and 90")
+	}
+	if longitude < -180 || longitude > 180 {
+		return fmt.Errorf("longitude must be between -180 and 180")
+	}
+
+	return s.repo.UpdateLocation(ctx, userID, latitude, longitude)
+}
+
+// GetLocation retrieves a user's location
+func (s *Service) GetLocation(ctx context.Context, userID string) (*UserLocation, error) {
+	return s.repo.GetLocation(ctx, userID)
+}
+
+// GetActiveDriversWithLocations retrieves all drivers who have been active in the last 10 minutes with their locations
+func (s *Service) GetActiveDriversWithLocations(ctx context.Context) ([]*DriverLocation, error) {
+	return s.repo.GetActiveDriversWithLocations(ctx)
+}
+
+// ResetPassword changes a user's password after verifying the current password
+func (s *Service) ResetPassword(ctx context.Context, userID, currentPassword, newPassword string) error {
+	// Validate new password strength
+	if len(newPassword) < 8 {
+		return ErrPasswordTooWeak
+	}
+
+	// Get user by ID to verify current password
+	user, userData, err := s.repo.FindByID(ctx, userID)
+	if err != nil {
+		return ErrInvalidCredentials
+	}
+
+	// Verify current password
+	ok, err := utils.CheckPasswordHash(currentPassword, user.PasswordHash)
+	if err != nil || !ok {
+		return ErrInvalidCredentials
+	}
+
+	// Hash new password
+	hashedPassword, err := utils.HashPassword(newPassword)
+	if err != nil {
+		return fmt.Errorf("failed to hash password: %w", err)
+	}
+
+	// Update password in database
+	user.PasswordHash = hashedPassword
+	user.UpdatedAt = time.Now()
+
+	// Update user with new password
+	err = s.repo.Update(ctx, user, userData)
+	if err != nil {
+		return fmt.Errorf("failed to update password: %w", err)
 	}
 
 	return nil

@@ -11,7 +11,7 @@ export const actions: Actions = {
 		const password = data.get('password');
 
 		if (!email || !password) {
-			return fail(400, { error: 'Email and password are required.' });
+			return fail(400, { error: 'Email y contraseña son obligatorios.' });
 		}
 
 		try {
@@ -29,14 +29,14 @@ export const actions: Actions = {
 				const errorData = await response
 					.json()
 					.catch(() => ({ message: 'Invalid credentials or server error.' }));
-				return fail(response.status, { error: errorData.error || 'Invalid credentials.' });
+				return fail(response.status, { error: errorData.error || 'Credenciales inválidas.' });
 			}
 
 			// Assuming the Go backend returns a JSON object with a "token" field
 			const { token } = await response.json();
 
 			if (!token) {
-				return fail(500, { error: 'Login successful, but no token was provided by the server.' });
+				return fail(500, { error: 'Inicio de sesión fallido, token no recibido.' });
 			}
 
 			// Set the token returned by Go in a secure, httpOnly cookie
@@ -49,7 +49,7 @@ export const actions: Actions = {
 			});
 		} catch (error) {
 			console.error('Error connecting to auth service:', error);
-			return fail(500, { error: 'Could not connect to the authentication service.' });
+			return fail(500, { error: 'No se pudo conectar con el servicio de autenticación.' });
 		}
 
 		// Redirect to the dashboard on successful login

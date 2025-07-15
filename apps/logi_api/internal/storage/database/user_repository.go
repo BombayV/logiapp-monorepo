@@ -4,6 +4,7 @@ import (
 	"bombayv/logiapp-monorepo/logi_api/internal/core/user"
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v4"
 )
@@ -132,6 +133,20 @@ func (r *UserRepository) Update(ctx context.Context, u *user.User, ud *user.User
 	})
 }
 
+// UpdateLastConnection updates the last_connection timestamp for a user
+func (r *UserRepository) UpdateLastConnection(ctx context.Context, userID string) error {
+	query := `
+		UPDATE users_data 
+		SET last_connection = NOW(), updated_at = NOW()
+		WHERE user_id = $1
+	`
+	_, err := r.db.Pool.Exec(ctx, query, userID)
+	if err != nil {
+		return fmt.Errorf("failed to update last connection: %w", err)
+	}
+	return nil
+}
+
 // Delete deletes a user and their data (hard delete)
 func (r *UserRepository) Delete(ctx context.Context, userID string) error {
 	return r.helper.WithTransaction(ctx, func(ctx context.Context, tx pgx.Tx) error {
@@ -226,4 +241,242 @@ func (r *UserRepository) FindByRole(ctx context.Context, role string) ([]*user.U
 	}
 
 	return usersList, nil
+}
+
+// FindByRoleWithData retrieves users by their role with user data
+func (r *UserRepository) FindByRoleWithData(ctx context.Context, role string) ([]*user.UserWithData, error) {
+	query := `
+		SELECT 
+			u.user_id, u.email, u.password_hash, u.role, u.created_at, u.updated_at,
+			ud.first_name, ud.last_name, ud.phone_number, ud.last_connection, ud.created_at as ud_created_at, ud.updated_at as ud_updated_at
+		FROM users u
+		LEFT JOIN users_data ud ON u.user_id = ud.user_id
+		WHERE u.role = $1
+		ORDER BY u.created_at DESC
+	`
+	rows, err := r.db.Pool.Query(ctx, query, role)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var usersList []*user.UserWithData
+	for rows.Next() {
+		var u user.User
+		var ud user.UserData
+		var firstName, lastName, phoneNumber *string
+		var lastConnection, udCreatedAt, udUpdatedAt *time.Time
+
+		if err := rows.Scan(&u.UserID, &u.Email, &u.PasswordHash, &u.Role, &u.CreatedAt, &u.UpdatedAt,
+			&firstName, &lastName, &phoneNumber, &lastConnection, &udCreatedAt, &udUpdatedAt); err != nil {
+			return nil, fmt.Errorf("failed to scan user: %w", err)
+		}
+
+		// Create UserWithData struct
+		userWithData := &user.UserWithData{
+			User: &u,
+		}
+
+		// Only populate UserData if it exists (LEFT JOIN might return nulls)
+		if firstName != nil && lastName != nil && phoneNumber != nil {
+			ud.UserID = u.UserID
+			ud.FirstName = *firstName
+			ud.LastName = *lastName
+			ud.PhoneNumber = *phoneNumber
+			if lastConnection != nil {
+				ud.LastConnection = *lastConnection
+			}
+			if udCreatedAt != nil {
+				ud.CreatedAt = *udCreatedAt
+			}
+			if udUpdatedAt != nil {
+				ud.UpdatedAt = *udUpdatedAt
+			}
+			userWithData.UserData = &ud
+		}
+
+		usersList = append(usersList, userWithData)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("row iteration error: %w", err)
+	}
+
+	return usersList, nil
+}
+
+// FindAllWithData retrieves all users with their user data (with pagination)
+func (r *UserRepository) FindAllWithData(ctx context.Context, limit, offset int) ([]*user.UserWithData, int, error) {
+	// Get total count
+	totalCount, err := r.helper.Count(ctx, "users", "1", 1) // Count all records
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// Get paginated results with JOIN
+	query := `
+		SELECT 
+			u.user_id, u.email, u.password_hash, u.role, u.created_at, u.updated_at,
+			ud.first_name, ud.last_name, ud.phone_number, ud.last_connection, ud.created_at as ud_created_at, ud.updated_at as ud_updated_at
+		FROM users u
+		LEFT JOIN users_data ud ON u.user_id = ud.user_id
+		ORDER BY u.created_at DESC
+		LIMIT $1 OFFSET $2
+	`
+	rows, err := r.db.Pool.Query(ctx, query, limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	var usersList []*user.UserWithData
+	for rows.Next() {
+		var u user.User
+		var ud user.UserData
+		var firstName, lastName, phoneNumber *string
+		var lastConnection, udCreatedAt, udUpdatedAt *time.Time
+
+		if err := rows.Scan(&u.UserID, &u.Email, &u.PasswordHash, &u.Role, &u.CreatedAt, &u.UpdatedAt,
+			&firstName, &lastName, &phoneNumber, &lastConnection, &udCreatedAt, &udUpdatedAt); err != nil {
+			return nil, 0, fmt.Errorf("failed to scan user: %w", err)
+		}
+
+		// Create UserWithData struct
+		userWithData := &user.UserWithData{
+			User: &u,
+		}
+
+		// Only populate UserData if it exists (LEFT JOIN might return nulls)
+		if firstName != nil && lastName != nil && phoneNumber != nil {
+			ud.UserID = u.UserID
+			ud.FirstName = *firstName
+			ud.LastName = *lastName
+			ud.PhoneNumber = *phoneNumber
+			if lastConnection != nil {
+				ud.LastConnection = *lastConnection
+			}
+			if udCreatedAt != nil {
+				ud.CreatedAt = *udCreatedAt
+			}
+			if udUpdatedAt != nil {
+				ud.UpdatedAt = *udUpdatedAt
+			}
+			userWithData.UserData = &ud
+		}
+
+		usersList = append(usersList, userWithData)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, 0, fmt.Errorf("row iteration error: %w", err)
+	}
+
+	return usersList, totalCount, nil
+}
+
+// UpdateLocation updates or inserts a user's location
+func (r *UserRepository) UpdateLocation(ctx context.Context, userID string, latitude, longitude float64) error {
+	query := `
+		INSERT INTO users_locations (user_id, location, updated_at)
+		VALUES ($1, ST_SetSRID(ST_MakePoint($2, $3), 4326), NOW())
+		ON CONFLICT (user_id)
+		DO UPDATE SET location = ST_SetSRID(ST_MakePoint($2, $3), 4326), updated_at = NOW()
+	`
+	_, err := r.db.Pool.Exec(ctx, query, userID, longitude, latitude)
+	if err != nil {
+		return fmt.Errorf("failed to update location: %w", err)
+	}
+	return nil
+}
+
+// GetLocation retrieves a user's location
+func (r *UserRepository) GetLocation(ctx context.Context, userID string) (*user.UserLocation, error) {
+	query := `
+		SELECT user_id, ST_X(location) as longitude, ST_Y(location) as latitude, updated_at
+		FROM users_locations
+		WHERE user_id = $1
+	`
+	var userLocation user.UserLocation
+	var latitude, longitude float64
+
+	err := r.db.Pool.QueryRow(ctx, query, userID).Scan(
+		&userLocation.UserID,
+		&longitude,
+		&latitude,
+		&userLocation.UpdatedAt,
+	)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, fmt.Errorf("location not found for user")
+		}
+		return nil, fmt.Errorf("failed to get location: %w", err)
+	}
+
+	// Set the computed fields
+	userLocation.Latitude = latitude
+	userLocation.Longitude = longitude
+	userLocation.Location = fmt.Sprintf("POINT(%f %f)", longitude, latitude)
+
+	return &userLocation, nil
+}
+
+// GetActiveDriversWithLocations retrieves all drivers who have been active in the last 10 minutes with their locations
+func (r *UserRepository) GetActiveDriversWithLocations(ctx context.Context) ([]*user.DriverLocation, error) {
+	query := `
+		SELECT 
+			u.user_id,
+			u.email,
+			ud.first_name,
+			ud.last_name,
+			ud.phone_number,
+			ST_X(ul.location) as longitude,
+			ST_Y(ul.location) as latitude,
+			ud.last_connection,
+			ul.updated_at as location_updated_at
+		FROM users u
+		INNER JOIN users_data ud ON u.user_id = ud.user_id
+		INNER JOIN users_locations ul ON u.user_id = ul.user_id
+		WHERE u.role = 'driver' 
+		AND ud.last_connection > NOW() - INTERVAL '10 minutes'
+		ORDER BY ud.last_connection DESC
+	`
+
+	rows, err := r.db.Pool.Query(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query active drivers: %w", err)
+	}
+	defer rows.Close()
+
+	var drivers []*user.DriverLocation
+	for rows.Next() {
+		var driver user.DriverLocation
+		var latitude, longitude float64
+
+		err := rows.Scan(
+			&driver.UserID,
+			&driver.Email,
+			&driver.FirstName,
+			&driver.LastName,
+			&driver.PhoneNumber,
+			&longitude,
+			&latitude,
+			&driver.LastConnection,
+			&driver.LocationUpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan driver: %w", err)
+		}
+
+		// Set the computed fields
+		driver.Latitude = latitude
+		driver.Longitude = longitude
+
+		drivers = append(drivers, &driver)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("row iteration error: %w", err)
+	}
+
+	return drivers, nil
 }

@@ -21,7 +21,7 @@ func NewService(repo Repository, userRepo user.Repository) *Service {
 }
 
 // CreateOrder handles the business logic for creating a new order.
-func (s *Service) CreateOrder(ctx context.Context, email, address string) (*Order, error) {
+func (s *Service) CreateOrder(ctx context.Context, email, address string, orderNumber string) (*Order, error) {
 	orderID := uuid.New().String()
 	now := time.Now()
 
@@ -33,6 +33,7 @@ func (s *Service) CreateOrder(ctx context.Context, email, address string) (*Orde
 
 	order := &Order{
 		OrderID:         orderID,
+		OrderNumber:     orderNumber,
 		CreatedBy:       user.UserID,
 		AssignedTo:      nil,
 		DeliveryAddress: address,
@@ -45,7 +46,43 @@ func (s *Service) CreateOrder(ctx context.Context, email, address string) (*Orde
 		return nil, fmt.Errorf("failed to save order: %w", err)
 	}
 
+	// Populate username fields
+	if err := s.populateUsernames(ctx, order); err != nil {
+		return nil, fmt.Errorf("failed to populate usernames: %w", err)
+	}
+
 	return order, nil
+}
+
+// populateUsernames populates the username fields for a single order
+func (s *Service) populateUsernames(ctx context.Context, order *Order) error {
+	// Get created_by username
+	createdByUser, _, err := s.userRepo.FindByID(ctx, order.CreatedBy)
+	if err != nil {
+		return fmt.Errorf("failed to find created_by user: %w", err)
+	}
+	order.CreatedByUsername = createdByUser.Email
+
+	// Get assigned_to username if exists
+	if order.AssignedTo != nil {
+		assignedToUser, _, err := s.userRepo.FindByID(ctx, *order.AssignedTo)
+		if err != nil {
+			return fmt.Errorf("failed to find assigned_to user: %w", err)
+		}
+		order.AssignedToUsername = &assignedToUser.Email
+	}
+
+	return nil
+}
+
+// populateUsernamesForOrders populates the username fields for multiple orders
+func (s *Service) populateUsernamesForOrders(ctx context.Context, orders []*Order) error {
+	for _, order := range orders {
+		if err := s.populateUsernames(ctx, order); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // FindAll retrieves all orders from the repository.
@@ -54,6 +91,12 @@ func (s *Service) FindAll(ctx context.Context) ([]*Order, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve orders: %w", err)
 	}
+
+	// Populate username fields for all orders
+	if err := s.populateUsernamesForOrders(ctx, orders); err != nil {
+		return nil, fmt.Errorf("failed to populate usernames: %w", err)
+	}
+
 	return orders, nil
 }
 
@@ -63,6 +106,12 @@ func (s *Service) FindByID(ctx context.Context, orderID string) (*Order, error) 
 	if err != nil {
 		return nil, fmt.Errorf("failed to find order: %w", err)
 	}
+
+	// Populate username fields
+	if err := s.populateUsernames(ctx, order); err != nil {
+		return nil, fmt.Errorf("failed to populate usernames: %w", err)
+	}
+
 	return order, nil
 }
 
@@ -72,6 +121,12 @@ func (s *Service) FindByIDWithItems(ctx context.Context, orderID string) (*Order
 	if err != nil {
 		return nil, fmt.Errorf("failed to find order with items: %w", err)
 	}
+
+	// Populate username fields
+	if err := s.populateUsernames(ctx, order); err != nil {
+		return nil, fmt.Errorf("failed to populate usernames: %w", err)
+	}
+
 	return order, nil
 }
 
@@ -90,6 +145,12 @@ func (s *Service) FindByUserID(ctx context.Context, userID string) ([]*Order, er
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve user orders: %w", err)
 	}
+
+	// Populate username fields for all orders
+	if err := s.populateUsernamesForOrders(ctx, orders); err != nil {
+		return nil, fmt.Errorf("failed to populate usernames: %w", err)
+	}
+
 	return orders, nil
 }
 
@@ -99,6 +160,12 @@ func (s *Service) FindByStatus(ctx context.Context, status string) ([]*Order, er
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve orders by status: %w", err)
 	}
+
+	// Populate username fields for all orders
+	if err := s.populateUsernamesForOrders(ctx, orders); err != nil {
+		return nil, fmt.Errorf("failed to populate usernames: %w", err)
+	}
+
 	return orders, nil
 }
 
@@ -119,6 +186,12 @@ func (s *Service) FindWithPagination(ctx context.Context, limit, offset int) ([]
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to retrieve paginated orders: %w", err)
 	}
+
+	// Populate username fields for all orders
+	if err := s.populateUsernamesForOrders(ctx, orders); err != nil {
+		return nil, 0, fmt.Errorf("failed to populate usernames: %w", err)
+	}
+
 	return orders, total, nil
 }
 
@@ -155,6 +228,11 @@ func (s *Service) UpdateOrder(ctx context.Context, orderID string, assignedTo, a
 
 	if err := s.repo.Update(ctx, order); err != nil {
 		return nil, fmt.Errorf("failed to update order: %w", err)
+	}
+
+	// Populate username fields
+	if err := s.populateUsernames(ctx, order); err != nil {
+		return nil, fmt.Errorf("failed to populate usernames: %w", err)
 	}
 
 	return order, nil
