@@ -68,6 +68,30 @@ class AuthService {
     }
   }
 
+  Future <bool> sendLocation(double latitude, double longitude) async {
+    try {
+      final token = await secureStorage.getToken();
+      if (token == null) return false;
+
+      final response = await post(
+        Uri.parse('$apiUrl/v1/users/location'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token'
+        },
+        body: jsonEncode({
+          'latitude': latitude,
+          'longitude': longitude,
+        }),
+      );
+
+      return response.statusCode == 200;
+    } catch (e) {
+      print('Error al enviar ubicación: $e');
+      return false;
+    }
+  }
+
   Future<bool> logout() async {
     try {
       final token = await secureStorage.getToken();
