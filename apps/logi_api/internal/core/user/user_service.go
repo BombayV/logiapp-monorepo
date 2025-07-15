@@ -119,10 +119,18 @@ func (s *Service) Logout(ctx context.Context, tokenString string) error {
 	}
 
 	// Update the user's last_connection timestamp
-	if err := s.repo.UpdateLastConnection(ctx, claims.Subject); err != nil {
-		// Log the error but don't fail the logout process
-		// The token is already revoked, so the user is effectively logged out
-		return fmt.Errorf("failed to update last connection: %w", err)
+	// Validate that claims.Subject is a valid UUID before updating
+	if claims.Subject != "" {
+		if _, err := uuid.Parse(claims.Subject); err != nil {
+			// Log the error but don't fail the logout process
+			fmt.Printf("Invalid UUID in token subject: %s, error: %v\n", claims.Subject, err)
+		} else {
+			if err := s.repo.UpdateLastConnection(ctx, claims.Subject); err != nil {
+				// Log the error but don't fail the logout process
+				// The token is already revoked, so the user is effectively logged out
+				fmt.Printf("Failed to update last connection for user %s: %v\n", claims.Subject, err)
+			}
+		}
 	}
 
 	return nil
