@@ -189,6 +189,28 @@ Authorization: Bearer <token>
 }
 ```
 
+### GET `/v1/users/:id/orders`
+**Description**: Get orders assigned to a specific user (driver only)  
+**Authentication**: Required (driver role)  
+**Path Parameters**:
+- `id`: User UUID (must match authenticated user's ID)
+
+**Response**:
+```json
+[
+  {
+    "order_id": "order-uuid",
+    "order_number": "ORD-001",
+    "email": "customer@example.com",
+    "address": "123 Main St, City, State",
+    "status": "pending",
+    "assigned_to": "driver-uuid",
+    "created_at": "2023-12-01T10:00:00Z",
+    "updated_at": "2023-12-01T14:25:00Z"
+  }
+]
+```
+
 ### DELETE `/v1/users/:id`
 **Description**: Delete user  
 **Authentication**: Required (any role)  

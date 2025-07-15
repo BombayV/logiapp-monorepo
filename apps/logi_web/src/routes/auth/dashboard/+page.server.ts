@@ -83,7 +83,7 @@ const delete_user = async (event: RequestEvent) => {
 	if (!userId) {
 		return fail(400, { error: 'ID de usuario no proporcionado.' });
 	}
-}
+};
 
 export const actions: Actions = {
 	logout,

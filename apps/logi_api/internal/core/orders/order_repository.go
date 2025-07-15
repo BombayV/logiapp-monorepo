@@ -14,6 +14,7 @@ type Repository interface {
 
 	// Query operations
 	FindByUserID(ctx context.Context, userID string) ([]*Order, error)
+	FindByAssignedTo(ctx context.Context, userID string) ([]*Order, error)
 	FindByStatus(ctx context.Context, status string) ([]*Order, error)
 
 	// Pagination

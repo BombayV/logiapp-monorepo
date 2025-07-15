@@ -2,7 +2,7 @@
 	import EllipsisIcon from '@lucide/svelte/icons/ellipsis';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
-  import * as AlertDialog from "$lib/components/ui/alert-dialog/index.js";
+	import * as AlertDialog from '$lib/components/ui/alert-dialog/index.js';
 	import type { User } from './columns.js';
 
 	let { user }: { user: User } = $props();
@@ -34,8 +34,8 @@
 			form.submit();
 		}
 
-    showDeleteDialog = false;
-    window.location.reload();
+		showDeleteDialog = false;
+		window.location.reload();
 	};
 </script>
 
@@ -54,12 +54,12 @@
 			<DropdownMenu.Item onclick={copyEmail}>Copiar email</DropdownMenu.Item>
 			<DropdownMenu.Item onclick={copyPhone}>Copiar teléfono</DropdownMenu.Item>
 		</DropdownMenu.Group>
-    {#if user.role !== 'admin'}
-      <DropdownMenu.Separator />
-      <DropdownMenu.Item variant="destructive" onclick={handleDeleteUser}>
-        Eliminar usuario
-      </DropdownMenu.Item>
-    {/if}
+		{#if user.role !== 'admin'}
+			<DropdownMenu.Separator />
+			<DropdownMenu.Item variant="destructive" onclick={handleDeleteUser}>
+				Eliminar usuario
+			</DropdownMenu.Item>
+		{/if}
 	</DropdownMenu.Content>
 </DropdownMenu.Root>
 
@@ -79,6 +79,11 @@
 </AlertDialog.Root>
 
 <!-- Hidden form for user deletion -->
-<form id="delete-user-form-{user.user_id}" method="POST" action="?/delete_user" style="display: none;">
+<form
+	id="delete-user-form-{user.user_id}"
+	method="POST"
+	action="?/delete_user"
+	style="display: none;"
+>
 	<input type="hidden" name="user_id" value={user.user_id} />
 </form>

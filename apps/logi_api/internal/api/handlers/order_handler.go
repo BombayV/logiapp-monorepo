@@ -357,3 +357,33 @@ func (h *OrderHandler) DeleteOrderItem(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "Order item deleted successfully"})
 }
+
+// GetOrdersByUserID retrieves orders for a specific user (driver)
+func (h *OrderHandler) GetOrdersByUserID(c *gin.Context) {
+	userID := c.Param("id")
+	if userID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "User ID is required"})
+		return
+	}
+
+	// Get the authenticated user's ID from the JWT token
+	authUserID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+		return
+	}
+
+	// Drivers can only access their own orders
+	if userID != authUserID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied: You can only view your own orders"})
+		return
+	}
+
+	orders, err := h.service.FindByAssignedTo(c.Request.Context(), userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, orders)
+}

@@ -189,6 +189,30 @@ func (s *Service) FindByUserID(ctx context.Context, userID string) ([]*Order, er
 	return orders, nil
 }
 
+// FindByAssignedTo retrieves all orders assigned to a specific user (driver).
+func (s *Service) FindByAssignedTo(ctx context.Context, userID string) ([]*Order, error) {
+	// Validate that the user exists
+	exists, err := s.userRepo.Exists(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check user existence: %w", err)
+	}
+	if !exists {
+		return nil, fmt.Errorf("user not found")
+	}
+
+	orders, err := s.repo.FindByAssignedTo(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve assigned orders: %w", err)
+	}
+
+	// Populate username fields for all orders
+	if err := s.populateUsernamesForOrders(ctx, orders); err != nil {
+		return nil, fmt.Errorf("failed to populate usernames: %w", err)
+	}
+
+	return orders, nil
+}
+
 // FindByStatus retrieves all orders with a specific status.
 func (s *Service) FindByStatus(ctx context.Context, status string) ([]*Order, error) {
 	orders, err := s.repo.FindByStatus(ctx, status)
