@@ -1,8 +1,8 @@
 <script lang="ts">
 	import type { Status } from '../orders/columns';
-	
+
 	let { status }: { status: Status } = $props();
-	
+
 	const statusConfig = {
 		pending: {
 			label: 'Pendiente',
@@ -21,10 +21,12 @@
 			class: 'bg-red-100 text-red-800 border-red-200'
 		}
 	};
-	
+
 	const config = statusConfig[status];
 </script>
 
-<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border {config.class}">
+<span
+	class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border {config.class}"
+>
 	{config.label}
 </span>

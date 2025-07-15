@@ -1,61 +1,84 @@
 <script lang="ts">
- import EllipsisIcon from "@lucide/svelte/icons/ellipsis";
- import { Button } from "$lib/components/ui/button/index.js";
- import * as DropdownMenu from "$lib/components/ui/dropdown-menu/index.js";
- import type { User } from "./columns.js";
- 
- let { user }: { user: User } = $props();
- 
- const copyEmail = () => {
-  navigator.clipboard.writeText(user.email);
-  // TODO: Add toast notification
-  console.log('Email copiado:', user.email);
- };
- 
- const copyPhone = () => {
-  if (user.phone) {
-   navigator.clipboard.writeText(user.phone);
-   // TODO: Add toast notification
-   console.log('Teléfono copiado:', user.phone);
-  } else {
-   alert('No hay teléfono disponible para este usuario');
-  }
- };
- 
- const deleteUser = () => {
-  // TODO: Implement delete user functionality
-  console.log('Delete user:', user.user_id);
-  alert(`Eliminar usuario: ${user.email}`);
- };
+	import EllipsisIcon from '@lucide/svelte/icons/ellipsis';
+	import { Button } from '$lib/components/ui/button/index.js';
+	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
+  import * as AlertDialog from "$lib/components/ui/alert-dialog/index.js";
+	import type { User } from './columns.js';
+
+	let { user }: { user: User } = $props();
+	let showDeleteDialog = $state(false);
+
+	const copyEmail = () => {
+		navigator.clipboard.writeText(user.email);
+		// TODO: Add toast notification
+		console.log('Email copiado:', user.email);
+	};
+
+	const copyPhone = () => {
+		if (user.phone_number) {
+			navigator.clipboard.writeText(user.phone_number);
+			// TODO: Add toast notification
+			console.log('Teléfono copiado:', user.phone_number);
+		} else {
+			alert('No hay teléfono disponible para este usuario');
+		}
+	};
+
+	const handleDeleteUser = () => {
+		showDeleteDialog = true;
+	};
+
+	const submitDeleteForm = () => {
+		const form = document.getElementById(`delete-user-form-${user.user_id}`) as HTMLFormElement;
+		if (form) {
+			form.submit();
+		}
+
+    showDeleteDialog = false;
+    window.location.reload();
+	};
 </script>
- 
+
 <DropdownMenu.Root>
- <DropdownMenu.Trigger>
-  {#snippet child({ props })}
-   <Button
-    {...props}
-    variant="ghost"
-    size="icon"
-    class="relative size-8 p-0"
-   >
-    <span class="sr-only">Open menu</span>
-    <EllipsisIcon />
-   </Button>
-  {/snippet}
- </DropdownMenu.Trigger>
- <DropdownMenu.Content>
-  <DropdownMenu.Group>
-   <DropdownMenu.Label>Acciones</DropdownMenu.Label>
-   <DropdownMenu.Item onclick={copyEmail}>
-    Copiar email
-   </DropdownMenu.Item>
-   <DropdownMenu.Item onclick={copyPhone}>
-    Copiar teléfono
-   </DropdownMenu.Item>
-  </DropdownMenu.Group>
-  <DropdownMenu.Separator />
-  <DropdownMenu.Item variant="destructive" onclick={deleteUser}>
-   Borrar usuario
-  </DropdownMenu.Item>
- </DropdownMenu.Content>
+	<DropdownMenu.Trigger>
+		{#snippet child({ props })}
+			<Button {...props} variant="ghost" size="icon" class="relative size-8 p-0">
+				<span class="sr-only">Open menu</span>
+				<EllipsisIcon />
+			</Button>
+		{/snippet}
+	</DropdownMenu.Trigger>
+	<DropdownMenu.Content>
+		<DropdownMenu.Group>
+			<DropdownMenu.Label>Acciones</DropdownMenu.Label>
+			<DropdownMenu.Item onclick={copyEmail}>Copiar email</DropdownMenu.Item>
+			<DropdownMenu.Item onclick={copyPhone}>Copiar teléfono</DropdownMenu.Item>
+		</DropdownMenu.Group>
+    {#if user.role !== 'admin'}
+      <DropdownMenu.Separator />
+      <DropdownMenu.Item variant="destructive" onclick={handleDeleteUser}>
+        Eliminar usuario
+      </DropdownMenu.Item>
+    {/if}
+	</DropdownMenu.Content>
 </DropdownMenu.Root>
+
+<AlertDialog.Root bind:open={showDeleteDialog}>
+	<AlertDialog.Content>
+		<AlertDialog.Header>
+			<AlertDialog.Title>Confirmar eliminación</AlertDialog.Title>
+			<AlertDialog.Description>
+				¿Estás seguro de que deseas eliminar este usuario? Esta acción no se puede deshacer.
+			</AlertDialog.Description>
+		</AlertDialog.Header>
+		<AlertDialog.Footer>
+			<AlertDialog.Cancel>Cancelar</AlertDialog.Cancel>
+			<AlertDialog.Action onclick={submitDeleteForm}>Eliminar</AlertDialog.Action>
+		</AlertDialog.Footer>
+	</AlertDialog.Content>
+</AlertDialog.Root>
+
+<!-- Hidden form for user deletion -->
+<form id="delete-user-form-{user.user_id}" method="POST" action="?/delete_user" style="display: none;">
+	<input type="hidden" name="user_id" value={user.user_id} />
+</form>

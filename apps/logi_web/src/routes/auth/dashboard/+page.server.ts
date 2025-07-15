@@ -5,6 +5,8 @@ import { fetchAuth } from '$lib/fetchAuth';
 import type { RequestEvent } from '@sveltejs/kit';
 import { getAllUsers } from '@/server/users';
 import type { User } from '@/components/users/columns';
+import { createOrder, getAllOrders } from '@/server/orders';
+import type { Order } from '@/components/orders/columns';
 
 export const load: PageServerLoad = async (event) => {
 	const { locals } = event;
@@ -12,12 +14,18 @@ export const load: PageServerLoad = async (event) => {
 		throw redirect(303, '/auth/login');
 	}
 
-	const users = await getAllUsers(event) as User[];
+	const users = (await getAllUsers(event)) as User[];
+	const orders = (await getAllOrders(event)) as Order[];
+	if (!users || !orders) {
+		return fail(500, { error: 'No se pudieron cargar los datos.' });
+	}
 
+	console.log('Loaded users:', users);
 	// Pass the user data to the page component
 	return {
 		user: locals.user,
 		users: users,
+		orders: orders
 	};
 };
 
@@ -47,45 +55,35 @@ const logout = async (event: RequestEvent) => {
 
 	// Redirect to the login page after successful logout
 	throw redirect(303, '/auth/login');
-}
+};
 
 const create_order = async (event: RequestEvent) => {
 	{
 		const formData = await event.request.formData();
 		const orderDetails = {
-			address: formData.get('address'),
-			email: formData.get('email')
+			address: formData.get('address') as string,
+			email: formData.get('email') as string,
+			order_number: formData.get('order_number') as string
 		};
 
-		try {
-			const response = await fetchAuth(
-				`${BACKEND_URL}/v1/orders`,
-				{
-					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json'
-					},
-					body: JSON.stringify(orderDetails),
-					credentials: 'include' // Ensure cookies are sent with the request
-				},
-				event
-			);
-
-			if (!response.ok) {
-				const errorData = await response
-					.json()
-					.catch(() => ({ message: 'Order creation failed.' }));
-				return fail(response.status, { error: errorData.error || 'Error al crear el pedido.' });
-			}
-
-			// Optionally, you can redirect or return a success message
-			return { success: true };
-		} catch (error) {
-			console.error('Error during order creation:', error);
-			return fail(500, { error: 'No se pudo conectar con el servicio de pedidos.' });
+		const newOrder = await createOrder(event, orderDetails);
+		if (!newOrder) {
+			return fail(500, { error: 'No se pudo crear el pedido.' });
 		}
+
+		// Optionally, you can redirect or return a success message
+		return { success: true };
 	}
 };
+
+const delete_user = async (event: RequestEvent) => {
+	const formData = await event.request.formData();
+	const userId = formData.get('user_id') as string;
+	console.log('Deleting user with ID:', userId);
+	if (!userId) {
+		return fail(400, { error: 'ID de usuario no proporcionado.' });
+	}
+}
 
 export const actions: Actions = {
 	logout,
