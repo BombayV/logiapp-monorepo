@@ -4,12 +4,44 @@
 	import * as Dialog from '@/components/ui/dialog';
 	import { Label } from '@/components/ui/label';
 	import { Input } from '@/components/ui/input';
-	import DataTable from '@/components/users/data-table.svelte';
+	import { DataTable } from '@/components/ui/data-table';
 	import { columns, type User } from '@/components/users/columns';
+	import { orderColumns, type Order } from '@/components/orders/columns';
 	export let data: PageData;
 
+	// Sample fallback data for testing if backend data is empty
+	const sampleUsers: User[] = [
+		{
+			user_id: 'user-001',
+			email: 'admin@bombayv.com',
+			role: 'admin',
+			created_at: '2023-09-15T10:00:00Z',
+			updated_at: '2023-09-15T10:00:00Z',
+			phone: '+593 99 123 4567'
+		},
+		{
+			user_id: 'user-002',
+			email: 'sales@bombayv.com',
+			role: 'sales',
+			created_at: '2023-09-20T14:30:00Z',
+			updated_at: '2023-09-20T14:30:00Z',
+			phone: '+593 98 765 4321'
+		},
+		{
+			user_id: 'user-003',
+			email: 'driver@bombayv.com',
+			role: 'driver',
+			created_at: '2023-09-25T09:15:00Z',
+			updated_at: '2023-09-25T09:15:00Z',
+			phone: '+593 97 555 1234'
+		}
+	];
 
-	const invoices = [
+	// Use backend data if available, otherwise use sample data
+	const displayUsers = data.users && data.users.length > 0 ? data.users : sampleUsers;
+
+
+	const orders: Order[] = [
 		{
 			order_id: 'uuid-1234',
 			created_by: 'me@bombayv.com',
@@ -18,10 +50,48 @@
 			status: 'pending',
 			created_at: '2023-10-01T12:00:00Z',
 			updated_at: '2023-10-01T12:00:00Z'
+		},
+		{
+			order_id: 'uuid-5678',
+			created_by: 'admin@bombayv.com',
+			assigned_to: 'driver@bombayv.com',
+			address: 'Av. Amazonas y Patria, Quito, Pichincha, 170102',
+			status: 'in_progress',
+			created_at: '2023-10-02T10:30:00Z',
+			updated_at: '2023-10-02T14:45:00Z'
+		},
+		{
+			order_id: 'uuid-9012',
+			created_by: 'sales@bombayv.com',
+			assigned_to: 'driver2@bombayv.com',
+			address: 'Calle Larga y Honorato Vásquez, Cuenca, Azuay, 010101',
+			status: 'completed',
+			created_at: '2023-09-28T08:15:00Z',
+			updated_at: '2023-09-28T16:30:00Z'
+		},
+		{
+			order_id: 'uuid-3456',
+			created_by: 'me@bombayv.com',
+			assigned_to: '',
+			address: 'Malecón 2000, Guayaquil, Guayas, 090101',
+			status: 'cancelled',
+			created_at: '2023-09-25T13:20:00Z',
+			updated_at: '2023-09-25T15:10:00Z'
+		},
+		{
+			order_id: 'uuid-7890',
+			created_by: 'admin@bombayv.com',
+			assigned_to: 'driver@bombayv.com',
+			address: 'Av. Colón y Reina Victoria, Quito, Pichincha, 170103',
+			status: 'pending',
+			created_at: '2023-10-03T09:00:00Z',
+			updated_at: '2023-10-03T09:00:00Z'
 		}
 	];
 
-	console.log(data.users)
+	console.log('Backend users:', data.users);
+	console.log('Display users:', displayUsers);
+	console.log('Orders:', orders);
 </script>
 
 <svelte:head>
@@ -96,7 +166,16 @@
 				</Dialog.Root>
 			</div>
 			<div class="mt-4">
-				<DataTable data={data.users} {columns} columnVisibility={{ user_id: false }} />
+				<DataTable 
+					data={displayUsers} 
+					columns={columns} 
+					columnVisibility={{ user_id: false }} 
+					searchable={true}
+					searchPlaceholder="Buscar usuarios..."
+					paginated={true}
+					sortable={true}
+					pageSize={10}
+				/>
 			</div>
 		</div>
 
@@ -117,7 +196,7 @@
 							<div class="grid gap-4 py-4">
 								<div class="grid grid-cols-4 items-center gap-4">
 									<Label for="email" class="text-right">Email</Label>
-									<Input id="email" value={data.user.user} class="col-span-3" disabled />
+									<Input id="email" value={data.user.email} class="col-span-3" disabled />
 								</div>
 								<div class="grid grid-cols-4 items-center gap-4">
 									<Label for="address" class="text-right">Dirección</Label>
@@ -135,6 +214,19 @@
 						</form>
 					</Dialog.Content>
 				</Dialog.Root>
+			</div>
+			<div class="mt-4">
+				<DataTable 
+					data={orders} 
+					columns={orderColumns} 
+					columnVisibility={{ order_id: false }}
+					searchable={true}
+					searchPlaceholder="Buscar órdenes..."
+					paginated={true}
+					sortable={true}
+					pageSize={5}
+					emptyMessage="No hay órdenes recientes."
+				/>
 			</div>
 		</div>
 

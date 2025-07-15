@@ -2,8 +2,31 @@
  import EllipsisIcon from "@lucide/svelte/icons/ellipsis";
  import { Button } from "$lib/components/ui/button/index.js";
  import * as DropdownMenu from "$lib/components/ui/dropdown-menu/index.js";
+ import type { User } from "./columns.js";
  
- let { id }: { id: string } = $props();
+ let { user }: { user: User } = $props();
+ 
+ const copyEmail = () => {
+  navigator.clipboard.writeText(user.email);
+  // TODO: Add toast notification
+  console.log('Email copiado:', user.email);
+ };
+ 
+ const copyPhone = () => {
+  if (user.phone) {
+   navigator.clipboard.writeText(user.phone);
+   // TODO: Add toast notification
+   console.log('Teléfono copiado:', user.phone);
+  } else {
+   alert('No hay teléfono disponible para este usuario');
+  }
+ };
+ 
+ const deleteUser = () => {
+  // TODO: Implement delete user functionality
+  console.log('Delete user:', user.user_id);
+  alert(`Eliminar usuario: ${user.email}`);
+ };
 </script>
  
 <DropdownMenu.Root>
@@ -22,13 +45,17 @@
  </DropdownMenu.Trigger>
  <DropdownMenu.Content>
   <DropdownMenu.Group>
-   <DropdownMenu.Label>Actions</DropdownMenu.Label>
-   <DropdownMenu.Item onclick={() => navigator.clipboard.writeText(id)}>
-    Copy payment ID
+   <DropdownMenu.Label>Acciones</DropdownMenu.Label>
+   <DropdownMenu.Item onclick={copyEmail}>
+    Copiar email
+   </DropdownMenu.Item>
+   <DropdownMenu.Item onclick={copyPhone}>
+    Copiar teléfono
    </DropdownMenu.Item>
   </DropdownMenu.Group>
   <DropdownMenu.Separator />
-  <DropdownMenu.Item>View customer</DropdownMenu.Item>
-  <DropdownMenu.Item>View payment details</DropdownMenu.Item>
+  <DropdownMenu.Item variant="destructive" onclick={deleteUser}>
+   Borrar usuario
+  </DropdownMenu.Item>
  </DropdownMenu.Content>
 </DropdownMenu.Root>

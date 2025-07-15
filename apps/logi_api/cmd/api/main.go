@@ -38,7 +38,7 @@ func main() {
 
 	// Initialize services
 	userService := user.NewService(repoManager.User, redisCache)
-	orderService := orders.NewService(repoManager.Orders, repoManager.User)
+	orderService := orders.NewService(repoManager.Orders, repoManager.User, redisCache)
 
 	// Initialize handlers
 	userHandler := handlers.NewUserHandler(userService)

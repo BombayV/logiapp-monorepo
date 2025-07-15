@@ -2,6 +2,7 @@ package orders
 
 import (
 	"bombayv/logiapp-monorepo/logi_api/internal/core/user"
+	"bombayv/logiapp-monorepo/logi_api/internal/storage/cache"
 	"context"
 	"fmt"
 	"time"
@@ -13,11 +14,12 @@ import (
 type Service struct {
 	repo     Repository
 	userRepo user.Repository
+	cache    *cache.Cache
 }
 
 // NewService creates a new order service.
-func NewService(repo Repository, userRepo user.Repository) *Service {
-	return &Service{repo: repo, userRepo: userRepo}
+func NewService(repo Repository, userRepo user.Repository, cache *cache.Cache) *Service {
+	return &Service{repo: repo, userRepo: userRepo, cache: cache}
 }
 
 // CreateOrder handles the business logic for creating a new order.
@@ -50,6 +52,9 @@ func (s *Service) CreateOrder(ctx context.Context, email, address string, orderN
 	if err := s.populateUsernames(ctx, order); err != nil {
 		return nil, fmt.Errorf("failed to populate usernames: %w", err)
 	}
+
+	// Invalidate orders cache since we added a new order
+	s.invalidateOrderCache(ctx, order.OrderID)
 
 	return order, nil
 }
@@ -87,6 +92,15 @@ func (s *Service) populateUsernamesForOrders(ctx context.Context, orders []*Orde
 
 // FindAll retrieves all orders from the repository.
 func (s *Service) FindAll(ctx context.Context) ([]*Order, error) {
+	// Try to get from cache first
+	cacheKey := "orders_all"
+
+	var cached []*Order
+	if err := s.cache.Get(ctx, cacheKey, &cached); err == nil {
+		return cached, nil
+	}
+
+	// If not in cache, get from database
 	orders, err := s.repo.FindAll(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve orders: %w", err)
@@ -97,11 +111,26 @@ func (s *Service) FindAll(ctx context.Context) ([]*Order, error) {
 		return nil, fmt.Errorf("failed to populate usernames: %w", err)
 	}
 
+	// Cache the result for 1 minute (short TTL since orders change frequently)
+	if cacheErr := s.cache.Set(ctx, cacheKey, orders, 1*time.Minute); cacheErr != nil {
+		// Log cache error but don't fail the request
+		fmt.Printf("Failed to cache all orders: %v\n", cacheErr)
+	}
+
 	return orders, nil
 }
 
 // FindByID retrieves an order by its ID.
 func (s *Service) FindByID(ctx context.Context, orderID string) (*Order, error) {
+	// Try to get from cache first
+	cacheKey := fmt.Sprintf("order:%s", orderID)
+
+	var cached Order
+	if err := s.cache.Get(ctx, cacheKey, &cached); err == nil {
+		return &cached, nil
+	}
+
+	// If not in cache, get from database
 	order, err := s.repo.FindByID(ctx, orderID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to find order: %w", err)
@@ -110,6 +139,12 @@ func (s *Service) FindByID(ctx context.Context, orderID string) (*Order, error) 
 	// Populate username fields
 	if err := s.populateUsernames(ctx, order); err != nil {
 		return nil, fmt.Errorf("failed to populate usernames: %w", err)
+	}
+
+	// Cache the result for 3 minutes
+	if cacheErr := s.cache.Set(ctx, cacheKey, order, 3*time.Minute); cacheErr != nil {
+		// Log cache error but don't fail the request
+		fmt.Printf("Failed to cache order %s: %v\n", orderID, cacheErr)
 	}
 
 	return order, nil
@@ -182,6 +217,20 @@ func (s *Service) FindWithPagination(ctx context.Context, limit, offset int) ([]
 		offset = 0
 	}
 
+	// Try to get from cache first
+	cacheKey := fmt.Sprintf("orders_paginated:%d:%d", limit, offset)
+
+	type OrdersWithPaginationResult struct {
+		Orders []*Order `json:"orders"`
+		Total  int      `json:"total"`
+	}
+
+	var cached OrdersWithPaginationResult
+	if err := s.cache.Get(ctx, cacheKey, &cached); err == nil {
+		return cached.Orders, cached.Total, nil
+	}
+
+	// If not in cache, get from database
 	orders, total, err := s.repo.FindWithPagination(ctx, limit, offset)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to retrieve paginated orders: %w", err)
@@ -190,6 +239,13 @@ func (s *Service) FindWithPagination(ctx context.Context, limit, offset int) ([]
 	// Populate username fields for all orders
 	if err := s.populateUsernamesForOrders(ctx, orders); err != nil {
 		return nil, 0, fmt.Errorf("failed to populate usernames: %w", err)
+	}
+
+	// Cache the result for 1 minute (short TTL since orders change frequently)
+	result := OrdersWithPaginationResult{Orders: orders, Total: total}
+	if cacheErr := s.cache.Set(ctx, cacheKey, result, 1*time.Minute); cacheErr != nil {
+		// Log cache error but don't fail the request
+		fmt.Printf("Failed to cache paginated orders (limit:%d, offset:%d): %v\n", limit, offset, cacheErr)
 	}
 
 	return orders, total, nil
@@ -235,6 +291,9 @@ func (s *Service) UpdateOrder(ctx context.Context, orderID string, assignedTo, a
 		return nil, fmt.Errorf("failed to populate usernames: %w", err)
 	}
 
+	// Invalidate orders cache since we updated an order
+	s.invalidateOrderCache(ctx, order.OrderID)
+
 	return order, nil
 }
 
@@ -252,6 +311,9 @@ func (s *Service) DeleteOrder(ctx context.Context, orderID string) error {
 	if err := s.repo.Delete(ctx, orderID); err != nil {
 		return fmt.Errorf("failed to delete order: %w", err)
 	}
+
+	// Invalidate orders cache since we deleted an order
+	s.invalidateOrderCache(ctx, orderID)
 
 	return nil
 }
@@ -420,4 +482,23 @@ func (s *Service) DeleteOrderItem(ctx context.Context, itemID string) error {
 	}
 
 	return nil
+}
+
+// invalidateOrderCache invalidates all cache entries related to orders
+func (s *Service) invalidateOrderCache(ctx context.Context, orderID string) {
+	// Invalidate specific order cache
+	orderKey := fmt.Sprintf("order:%s", orderID)
+	if err := s.cache.Delete(ctx, orderKey); err != nil {
+		fmt.Printf("Failed to invalidate order cache for %s: %v\n", orderID, err)
+	}
+
+	// Invalidate all orders cache
+	if err := s.cache.Delete(ctx, "orders_all"); err != nil {
+		fmt.Printf("Failed to invalidate all orders cache: %v\n", err)
+	}
+
+	// Invalidate paginated orders cache (all combinations of limit/offset)
+	if err := s.cache.DeletePattern(ctx, "orders_paginated:*"); err != nil {
+		fmt.Printf("Failed to invalidate paginated orders cache: %v\n", err)
+	}
 }

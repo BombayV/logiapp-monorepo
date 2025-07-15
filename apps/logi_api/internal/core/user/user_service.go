@@ -130,9 +130,30 @@ func (s *Service) Logout(ctx context.Context, tokenString string) error {
 
 // GetUserProfile retrieves a user's profile information by user ID.
 func (s *Service) GetUserProfile(ctx context.Context, userID string) (*User, *UserData, error) {
+	// Try to get from cache first
+	cacheKey := fmt.Sprintf("user_profile:%s", userID)
+
+	type UserProfile struct {
+		User     *User     `json:"user"`
+		UserData *UserData `json:"user_data"`
+	}
+
+	var cached UserProfile
+	if err := s.cache.Get(ctx, cacheKey, &cached); err == nil {
+		return cached.User, cached.UserData, nil
+	}
+
+	// If not in cache, get from database
 	user, userData, err := s.repo.FindByID(ctx, userID)
 	if err != nil {
 		return nil, nil, err
+	}
+
+	// Cache the result for 5 minutes
+	profile := UserProfile{User: user, UserData: userData}
+	if cacheErr := s.cache.Set(ctx, cacheKey, profile, 5*time.Minute); cacheErr != nil {
+		// Log cache error but don't fail the request
+		fmt.Printf("Failed to cache user profile for %s: %v\n", userID, cacheErr)
 	}
 
 	return user, userData, nil
@@ -150,9 +171,30 @@ func (s *Service) GetAllUsers(ctx context.Context, limit, offset int) ([]*User, 
 
 // GetAllUsersWithData retrieves all users with their profile data (admin function).
 func (s *Service) GetAllUsersWithData(ctx context.Context, limit, offset int) ([]*UserWithData, int, error) {
+	// Try to get from cache first
+	cacheKey := fmt.Sprintf("users_with_data:%d:%d", limit, offset)
+
+	type UsersWithDataResult struct {
+		Users []*UserWithData `json:"users"`
+		Total int             `json:"total"`
+	}
+
+	var cached UsersWithDataResult
+	if err := s.cache.Get(ctx, cacheKey, &cached); err == nil {
+		return cached.Users, cached.Total, nil
+	}
+
+	// If not in cache, get from database
 	users, total, err := s.repo.FindAllWithData(ctx, limit, offset)
 	if err != nil {
 		return nil, 0, err
+	}
+
+	// Cache the result for 2 minutes (shorter than user profiles since this is a list)
+	result := UsersWithDataResult{Users: users, Total: total}
+	if cacheErr := s.cache.Set(ctx, cacheKey, result, 2*time.Minute); cacheErr != nil {
+		// Log cache error but don't fail the request
+		fmt.Printf("Failed to cache users with data (limit:%d, offset:%d): %v\n", limit, offset, cacheErr)
 	}
 
 	return users, total, nil
@@ -265,7 +307,27 @@ func (s *Service) GetLocation(ctx context.Context, userID string) (*UserLocation
 
 // GetActiveDriversWithLocations retrieves all drivers who have been active in the last 10 minutes with their locations
 func (s *Service) GetActiveDriversWithLocations(ctx context.Context) ([]*DriverLocation, error) {
-	return s.repo.GetActiveDriversWithLocations(ctx)
+	// Try to get from cache first
+	cacheKey := "active_drivers_locations"
+
+	var cached []*DriverLocation
+	if err := s.cache.Get(ctx, cacheKey, &cached); err == nil {
+		return cached, nil
+	}
+
+	// If not in cache, get from database
+	drivers, err := s.repo.GetActiveDriversWithLocations(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// Cache the result for 30 seconds (short TTL since location data changes frequently)
+	if cacheErr := s.cache.Set(ctx, cacheKey, drivers, 30*time.Second); cacheErr != nil {
+		// Log cache error but don't fail the request
+		fmt.Printf("Failed to cache active drivers locations: %v\n", cacheErr)
+	}
+
+	return drivers, nil
 }
 
 // ResetPassword changes a user's password after verifying the current password
@@ -303,5 +365,27 @@ func (s *Service) ResetPassword(ctx context.Context, userID, currentPassword, ne
 		return fmt.Errorf("failed to update password: %w", err)
 	}
 
+	// Invalidate user profile cache
+	s.invalidateUserCache(ctx, userID)
+
 	return nil
+}
+
+// invalidateUserCache invalidates all cache entries related to a user
+func (s *Service) invalidateUserCache(ctx context.Context, userID string) {
+	// Invalidate user profile cache
+	userProfileKey := fmt.Sprintf("user_profile:%s", userID)
+	if err := s.cache.Delete(ctx, userProfileKey); err != nil {
+		fmt.Printf("Failed to invalidate user profile cache for %s: %v\n", userID, err)
+	}
+
+	// Invalidate users list cache (all combinations of limit/offset)
+	if err := s.cache.DeletePattern(ctx, "users_with_data:*"); err != nil {
+		fmt.Printf("Failed to invalidate users list cache: %v\n", err)
+	}
+
+	// Invalidate active drivers cache if user is a driver
+	if err := s.cache.Delete(ctx, "active_drivers_locations"); err != nil {
+		fmt.Printf("Failed to invalidate active drivers cache: %v\n", err)
+	}
 }

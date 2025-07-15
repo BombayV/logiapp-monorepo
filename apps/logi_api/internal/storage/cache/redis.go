@@ -3,6 +3,8 @@ package cache
 import (
 	"context"
 	"crypto/tls"
+	"encoding/json"
+	"fmt"
 	"log"
 	"net/url"
 	"time"
@@ -61,6 +63,54 @@ func (c *Cache) AddRevokedToken(ctx context.Context, jti string, expiration time
 // IsTokenRevoked checks if a token's JTI is in the revocation list.
 func (c *Cache) IsTokenRevoked(ctx context.Context, jti string) (bool, error) {
 	exists, err := c.Client.Do(ctx, c.Client.B().Exists().Key(jti).Build()).AsInt64()
+	if err != nil {
+		return false, err
+	}
+	return exists == 1, nil
+}
+
+// Set stores a value in the cache with an expiration time
+func (c *Cache) Set(ctx context.Context, key string, value interface{}, expiration time.Duration) error {
+	jsonValue, err := json.Marshal(value)
+	if err != nil {
+		return fmt.Errorf("failed to marshal value: %w", err)
+	}
+
+	return c.Client.Do(ctx, c.Client.B().Set().Key(key).Value(string(jsonValue)).Ex(expiration).Build()).Error()
+}
+
+// Get retrieves a value from the cache
+func (c *Cache) Get(ctx context.Context, key string, dest interface{}) error {
+	result, err := c.Client.Do(ctx, c.Client.B().Get().Key(key).Build()).ToString()
+	if err != nil {
+		return err
+	}
+
+	return json.Unmarshal([]byte(result), dest)
+}
+
+// Delete removes a key from the cache
+func (c *Cache) Delete(ctx context.Context, key string) error {
+	return c.Client.Do(ctx, c.Client.B().Del().Key(key).Build()).Error()
+}
+
+// DeletePattern removes all keys matching a pattern
+func (c *Cache) DeletePattern(ctx context.Context, pattern string) error {
+	keys, err := c.Client.Do(ctx, c.Client.B().Keys().Pattern(pattern).Build()).AsStrSlice()
+	if err != nil {
+		return err
+	}
+
+	if len(keys) == 0 {
+		return nil
+	}
+
+	return c.Client.Do(ctx, c.Client.B().Del().Key(keys...).Build()).Error()
+}
+
+// Exists checks if a key exists in the cache
+func (c *Cache) Exists(ctx context.Context, key string) (bool, error) {
+	exists, err := c.Client.Do(ctx, c.Client.B().Exists().Key(key).Build()).AsInt64()
 	if err != nil {
 		return false, err
 	}

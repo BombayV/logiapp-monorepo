@@ -7,7 +7,11 @@ import DataTableActions from "./data-table-actions.svelte";
 export type User = {
   user_id: string;
   email: string;
+  first_name?: string;
+  last_name?: string;
   role: 'admin' | 'sales' | 'driver';
+  phone_number?: string;
+  last_connection?: string;
   created_at: string;
   updated_at: string;
 }
@@ -30,6 +34,14 @@ export const columns: ColumnDef<User>[] = [
     header: 'Rol',
   },
   {
+    accessorKey: 'phone',
+    header: 'Teléfono',
+    cell: ({ getValue }) => {
+      const phone = getValue<string>();
+      return phone || 'No disponible';
+    },
+  },
+  {
     accessorKey: 'created_at',
     header: 'Creado el',
     cell: ({ getValue }) => {
@@ -49,8 +61,8 @@ export const columns: ColumnDef<User>[] = [
     id: 'actions',
     header: 'Acciones',
     cell: ({ row }) => {
-      const { user_id } = row.original;
-      return renderComponent(DataTableActions, { id: user_id });
+      const user = row.original;
+      return renderComponent(DataTableActions, { user });
     },
   }
 ]

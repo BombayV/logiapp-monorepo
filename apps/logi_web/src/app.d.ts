@@ -5,13 +5,15 @@ declare global {
 		// interface Error {}
 		interface Locals {
 			user?: {
-				profile?: {
-					first_name?: string;
-					last_name?: string;
-					phone_number?: string;
-				};
-				role?: string;
-				user?: string;
+				email: string;
+				role: 'admin' | 'sales' | 'driver';
+				user_id: string;
+				profile: {
+					first_name: string;
+					last_name: string;
+					phone_number: string;
+					last_connection: string;
+				}
 			} | null; // User object or null if not authenticated
 		}
 		// interface PageData {}
