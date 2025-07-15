@@ -2,7 +2,6 @@
 .vscode/
 
 *.sql
-.air.toml
 tmp/
 
-api
+/api
