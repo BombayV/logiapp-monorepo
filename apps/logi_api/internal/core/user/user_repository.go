@@ -26,4 +26,5 @@ type Repository interface {
 	UpdateLocation(ctx context.Context, userID string, latitude, longitude float64) error
 	GetLocation(ctx context.Context, userID string) (*UserLocation, error)
 	GetActiveDriversWithLocations(ctx context.Context) ([]*DriverLocation, error)
+	GetAllDrivers(ctx context.Context) ([]*Driver, error)
 }

@@ -97,14 +97,12 @@ func (h *StatusHandler) checkDatabase(ctx context.Context) ServiceStatus {
 
 	// Test basic connectivity
 	err := h.DB.Pool.Ping(ctx)
-	latency := time.Since(start)
-
 	if err != nil {
 		return ServiceStatus{
 			Name:    "database",
 			Status:  "unhealthy",
 			Message: "Database connection failed",
-			Latency: latency,
+			Latency: time.Since(start),
 		}
 	}
 
@@ -116,7 +114,7 @@ func (h *StatusHandler) checkDatabase(ctx context.Context) ServiceStatus {
 			Name:    "database",
 			Status:  "unhealthy",
 			Message: "Database query failed",
-			Latency: latency,
+			Latency: time.Since(start),
 		}
 	}
 
@@ -124,7 +122,7 @@ func (h *StatusHandler) checkDatabase(ctx context.Context) ServiceStatus {
 		Name:    "database",
 		Status:  "healthy",
 		Message: "Database is operational",
-		Latency: latency,
+		Latency: time.Since(start),
 	}
 }
 
@@ -134,13 +132,12 @@ func (h *StatusHandler) checkCache(ctx context.Context) ServiceStatus {
 
 	// Test basic connectivity with a ping
 	err := h.Cache.Client.Do(ctx, h.Cache.Client.B().Ping().Build()).Error()
-	latency := time.Since(start)
 	if err != nil {
 		return ServiceStatus{
 			Name:    "cache",
 			Status:  "unhealthy",
 			Message: "Cache connection failed",
-			Latency: latency,
+			Latency: time.Since(start),
 		}
 	}
 
@@ -155,7 +152,7 @@ func (h *StatusHandler) checkCache(ctx context.Context) ServiceStatus {
 			Name:    "cache",
 			Status:  "unhealthy",
 			Message: "Cache write operation failed",
-			Latency: latency,
+			Latency: time.Since(start),
 		}
 	}
 
@@ -166,7 +163,7 @@ func (h *StatusHandler) checkCache(ctx context.Context) ServiceStatus {
 			Name:    "cache",
 			Status:  "unhealthy",
 			Message: "Cache read operation failed",
-			Latency: latency,
+			Latency: time.Since(start),
 		}
 	}
 
@@ -177,7 +174,7 @@ func (h *StatusHandler) checkCache(ctx context.Context) ServiceStatus {
 		Name:    "cache",
 		Status:  "healthy",
 		Message: "Cache is operational",
-		Latency: latency,
+		Latency: time.Since(start),
 	}
 }
 

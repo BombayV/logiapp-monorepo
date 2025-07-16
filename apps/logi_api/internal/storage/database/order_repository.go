@@ -112,6 +112,17 @@ func (r *OrderRepository) FindByUserID(ctx context.Context, userID string) ([]*o
 	return r.findOrdersWithQuery(ctx, query, userID)
 }
 
+// FindByAssignedTo finds all orders assigned to a specific user (only pending and in_progress)
+func (r *OrderRepository) FindByAssignedTo(ctx context.Context, userID string) ([]*orders.Order, error) {
+	query := `
+		SELECT order_id, order_number, created_by, assigned_to, delivery_address, status, created_at, updated_at
+		FROM orders
+		WHERE assigned_to = $1 AND status IN ('pending', 'in_progress')
+		ORDER BY created_at DESC
+	`
+	return r.findOrdersWithQuery(ctx, query, userID)
+}
+
 // FindByStatus finds all orders with a specific status
 func (r *OrderRepository) FindByStatus(ctx context.Context, status string) ([]*orders.Order, error) {
 	query := `

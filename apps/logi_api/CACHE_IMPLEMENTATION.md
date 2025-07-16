@@ -34,14 +34,20 @@ Extended the existing cache implementation with generic methods:
    - TTL: 30 seconds
    - Caches active driver locations (short TTL for real-time data)
 
+4. **GetAllDrivers** - Cache key: `all_drivers`
+   - TTL: 5 minutes
+   - Caches all drivers ordered by last connection
+
 ### Cache Invalidation
 
 The `invalidateUserCache` method handles:
 - Individual user profile cache
 - User list caches (all pagination combinations)
 - Active drivers cache
+- All drivers cache
 
 **Triggered on:**
+- User creation
 - User password reset
 - User profile updates
 - User location updates
@@ -62,12 +68,17 @@ The `invalidateUserCache` method handles:
    - TTL: 1 minute
    - Caches paginated order results
 
+4. **FindByAssignedTo** - Cache key: `orders_assigned_to:{userID}`
+   - TTL: 1 minute
+   - Caches pending and in_progress orders assigned to a specific driver
+
 ### Cache Invalidation
 
 The `invalidateOrderCache` method handles:
 - Individual order cache
 - All orders cache  
 - Paginated orders cache (all combinations)
+- Assigned orders cache (all users)
 
 **Triggered on:**
 - Order creation
@@ -88,9 +99,11 @@ The `invalidateOrderCache` method handles:
 user_profile:user-123-uuid
 users_with_data:10:0
 active_drivers_locations
+all_drivers
 order:order-456-uuid
 orders_all
 orders_paginated:20:10
+orders_assigned_to:user-123-uuid
 ```
 
 ## TTL Strategy
@@ -99,9 +112,11 @@ orders_paginated:20:10
 |-----------|-----|-----------|
 | User Profiles | 5 min | Moderately stable data |
 | User Lists | 2 min | Changes less frequently |
+| All Drivers | 5 min | Moderately stable data |
 | Active Drivers | 30 sec | Real-time location data |
 | Individual Orders | 3 min | Detailed order data |
 | Order Lists | 1 min | Frequently changing data |
+| Assigned Orders | 1 min | Driver-specific orders, changes frequently |
 
 ## Error Handling
 

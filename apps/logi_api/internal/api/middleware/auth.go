@@ -53,7 +53,7 @@ func AuthMiddleware(role []string) gin.HandlerFunc {
 				return
 			}
 			if isRevoked {
-				c.JSON(http.StatusUnauthorized, gin.H{"error": "Token has been revoked"})
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "Token has already been revoked"})
 				c.Abort()
 				return
 			}

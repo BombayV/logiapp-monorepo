@@ -80,7 +80,10 @@ func (s *Service) CreateUser(ctx context.Context, email, password, firstName, la
 		return nil, err
 	}
 
-	// 7. Return the created user.
+	// 7. Invalidate user-related caches
+	s.invalidateUserCache(ctx, userID)
+
+	// 8. Return the created user.
 	return user, nil
 }
 
@@ -119,10 +122,18 @@ func (s *Service) Logout(ctx context.Context, tokenString string) error {
 	}
 
 	// Update the user's last_connection timestamp
-	if err := s.repo.UpdateLastConnection(ctx, claims.Subject); err != nil {
-		// Log the error but don't fail the logout process
-		// The token is already revoked, so the user is effectively logged out
-		return fmt.Errorf("failed to update last connection: %w", err)
+	// Validate that claims.Subject is a valid UUID before updating
+	if claims.Subject != "" {
+		if _, err := uuid.Parse(claims.Subject); err != nil {
+			// Log the error but don't fail the logout process
+			fmt.Printf("Invalid UUID in token subject: %s, error: %v\n", claims.Subject, err)
+		} else {
+			if err := s.repo.UpdateLastConnection(ctx, claims.Subject); err != nil {
+				// Log the error but don't fail the logout process
+				// The token is already revoked, so the user is effectively logged out
+				fmt.Printf("Failed to update last connection for user %s: %v\n", claims.Subject, err)
+			}
+		}
 	}
 
 	return nil
@@ -330,6 +341,31 @@ func (s *Service) GetActiveDriversWithLocations(ctx context.Context) ([]*DriverL
 	return drivers, nil
 }
 
+// GetAllDrivers retrieves all drivers ordered by last connection
+func (s *Service) GetAllDrivers(ctx context.Context) ([]*Driver, error) {
+	// Try to get from cache first
+	cacheKey := "all_drivers"
+
+	var cached []*Driver
+	if err := s.cache.Get(ctx, cacheKey, &cached); err == nil {
+		return cached, nil
+	}
+
+	// If not in cache, get from database
+	drivers, err := s.repo.GetAllDrivers(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// Cache the result for 5 minutes (reasonable TTL for driver list)
+	if cacheErr := s.cache.Set(ctx, cacheKey, drivers, 5*time.Minute); cacheErr != nil {
+		// Log cache error but don't fail the request
+		fmt.Printf("Failed to cache all drivers: %v\n", cacheErr)
+	}
+
+	return drivers, nil
+}
+
 // ResetPassword changes a user's password after verifying the current password
 func (s *Service) ResetPassword(ctx context.Context, userID, currentPassword, newPassword string) error {
 	// Validate new password strength
@@ -387,5 +423,10 @@ func (s *Service) invalidateUserCache(ctx context.Context, userID string) {
 	// Invalidate active drivers cache if user is a driver
 	if err := s.cache.Delete(ctx, "active_drivers_locations"); err != nil {
 		fmt.Printf("Failed to invalidate active drivers cache: %v\n", err)
+	}
+
+	// Invalidate all drivers cache
+	if err := s.cache.Delete(ctx, "all_drivers"); err != nil {
+		fmt.Printf("Failed to invalidate all drivers cache: %v\n", err)
 	}
 }

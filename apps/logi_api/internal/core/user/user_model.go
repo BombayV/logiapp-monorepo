@@ -48,3 +48,16 @@ type DriverLocation struct {
 	LastConnection    time.Time `json:"last_connection"`
 	LocationUpdatedAt time.Time `json:"location_updated_at"`
 }
+
+// Driver represents a driver's basic info without location
+type Driver struct {
+	UserID         string    `json:"user_id"`
+	Email          string    `json:"email"`
+	FirstName      string    `json:"first_name"`
+	LastName       string    `json:"last_name"`
+	PhoneNumber    string    `json:"phone_number"`
+	Role           string    `json:"role"`
+	LastConnection time.Time `json:"last_connection"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
+}

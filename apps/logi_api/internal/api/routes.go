@@ -53,11 +53,13 @@ func SetupRouter(db *database.DB, redisCache *cache.Cache, userHandler *handlers
 		v1.GET("/users/location", middleware.AuthMiddleware([]string{"driver"}), userHandler.GetLocation)
 
 		v1.GET("/users/drivers/active", middleware.AuthMiddleware([]string{"sales"}), userHandler.GetActiveDriversWithLocations)
+		v1.GET("/users/drivers", middleware.AuthMiddleware([]string{"sales"}), userHandler.GetAllDrivers)
 
 		// Get all users (admin only)
 		v1.GET("/users", middleware.AuthMiddleware([]string{"sales"}), userHandler.GetUsers)
 		v1.POST("/users", middleware.AuthMiddleware([]string{}), userHandler.RegisterUser)
 		v1.GET("/users/:id", middleware.AuthMiddleware([]string{}), userHandler.GetUserByID)
+		v1.GET("/users/:id/orders", middleware.AuthMiddleware([]string{"driver"}), orderHandler.GetOrdersByUserID)
 		v1.DELETE("/users/:id", middleware.AuthMiddleware([]string{}), userHandler.DeleteUser)
 
 		// Order routes (protected)

@@ -10,11 +10,17 @@
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
 	import { Button } from '$lib/components/ui/button';
-	import type { ActionData } from './$types';
+	import type { ActionData, PageData } from './$types';
 
 	export let form: ActionData;
+	export let data: PageData;
 	let email = '';
 	let password = '';
+
+	// Type guard to check if data has error property
+	function hasError(data: PageData): data is PageData & { error: string } {
+		return 'error' in data && typeof data.error === 'string';
+	}
 </script>
 
 <svelte:head>
@@ -52,11 +58,11 @@
 						bind:value={password}
 					/>
 				</div>
-				{#if form?.error}
-					{#if form.error === 'Invalid credentials.'}
+				{#if form?.error || hasError(data)}
+					{#if form?.error === 'Invalid credentials.'}
 						<p class="text-red-500 text-sm">Email o contraseña incorrectos.</p>
 					{:else}
-						<p class="text-red-500 text-sm">{form.error}</p>
+						<p class="text-red-500 text-sm">{form?.error || (hasError(data) ? data.error : '')}</p>
 					{/if}
 				{/if}
 			</CardContent>
