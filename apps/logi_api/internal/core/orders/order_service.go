@@ -276,7 +276,7 @@ func (s *Service) FindWithPagination(ctx context.Context, limit, offset int) ([]
 }
 
 // UpdateOrder updates an existing order.
-func (s *Service) UpdateOrder(ctx context.Context, orderID string, assignedTo, address, status string) (*Order, error) {
+func (s *Service) UpdateOrder(ctx context.Context, orderID string, assignedTo string, assignedToProvided bool, address, status string) (*Order, error) {
 	// Find the existing order
 	order, err := s.repo.FindByID(ctx, orderID)
 	if err != nil {
@@ -284,16 +284,21 @@ func (s *Service) UpdateOrder(ctx context.Context, orderID string, assignedTo, a
 	}
 
 	// Update fields
-	if assignedTo != "" {
-		// Validate that the assigned user exists
-		exists, err := s.userRepo.Exists(ctx, assignedTo)
-		if err != nil {
-			return nil, fmt.Errorf("failed to validate assigned user: %w", err)
+	if assignedToProvided {
+		if assignedTo != "" {
+			// Validate that the assigned user exists
+			exists, err := s.userRepo.Exists(ctx, assignedTo)
+			if err != nil {
+				return nil, fmt.Errorf("failed to validate assigned user: %w", err)
+			}
+			if !exists {
+				return nil, fmt.Errorf("assigned user not found")
+			}
+			order.AssignedTo = &assignedTo
+		} else {
+			// Set to null when assignedTo is empty string but was provided
+			order.AssignedTo = nil
 		}
-		if !exists {
-			return nil, fmt.Errorf("assigned user not found")
-		}
-		order.AssignedTo = &assignedTo
 	}
 
 	if address != "" {

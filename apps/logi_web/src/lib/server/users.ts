@@ -37,7 +37,7 @@ export const createUser = async (
 		role: 'sales' | 'driver';
 		first_name: string;
 		last_name: string;
-		phone: string;
+		phone_number: string;
 	}
 ) => {
 	try {
@@ -64,6 +64,62 @@ export const createUser = async (
 		return newUser;
 	} catch (error) {
 		console.error('Error creating user:', error);
+		return null;
+	}
+};
+
+export const logoutUser = async (event: RequestEvent) => {
+	try {
+		const response = await fetchAuth(
+			`/v1/users/logout`,
+			{
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				credentials: 'include' // Ensure cookies are sent with the request
+			},
+			event
+		);
+
+		if (!response.ok) {
+			const errorData = await response.json().catch(() => ({ message: 'Logout failed.' }));
+			return { success: false, error: errorData.error || 'Cerrar sesión falló.' };
+		}
+
+		// Clear the session cookie
+		event.cookies.delete('session', { path: '/' });
+
+		return { success: true };
+	} catch (error) {
+		console.error('Error during logout:', error);
+		return { success: false, error: 'No se pudo conectar con el servicio de autenticación.' };
+	}
+};
+
+export const deleteUser = async (event: RequestEvent, userId: string) => {
+	try {
+		const response = await fetchAuth(
+			`/v1/users/${userId}`,
+			{
+				method: 'DELETE',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				credentials: 'include' // Ensure cookies are sent with the request
+			},
+			event
+		);
+
+		if (!response.ok) {
+			const errorData = await response.json().catch(() => ({ message: 'Failed to delete user.' }));
+			console.log('Error deleting user:', errorData);
+			return null;
+		}
+
+		return { success: true };
+	} catch (error) {
+		console.error('Error deleting user:', error);
 		return null;
 	}
 };

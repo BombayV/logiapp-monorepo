@@ -24,14 +24,14 @@ type RegisterUserRequest struct {
 	Password  string `json:"password" binding:"required,min=8"`
 	FirstName string `json:"first_name" binding:"required"`
 	LastName  string `json:"last_name" binding:"required"`
-	Phone     string `json:"phone" binding:"required"`
+	Phone     string `json:"phone_number" binding:"required"`
 	Role      string `json:"role" binding:"required"`
 }
 
 type UpdateUserRequest struct {
 	FirstName *string `json:"first_name,omitempty"`
 	LastName  *string `json:"last_name,omitempty"`
-	Phone     *string `json:"phone,omitempty"`
+	Phone     *string `json:"phone_number,omitempty"`
 	Role      *string `json:"role,omitempty"`
 }
 
@@ -346,6 +346,25 @@ func (h *UserHandler) GetActiveDriversWithLocations(c *gin.Context) {
 	// Ensure drivers is always an empty array instead of null
 	if drivers == nil {
 		drivers = []*user.DriverLocation{}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"drivers": drivers,
+		"count":   len(drivers),
+	})
+}
+
+// GetAllDrivers returns all drivers ordered by last connection
+func (h *UserHandler) GetAllDrivers(c *gin.Context) {
+	drivers, err := h.UserService.GetAllDrivers(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve drivers"})
+		return
+	}
+
+	// Ensure drivers is always an empty array instead of null
+	if drivers == nil {
+		drivers = []*user.Driver{}
 	}
 
 	c.JSON(http.StatusOK, gin.H{

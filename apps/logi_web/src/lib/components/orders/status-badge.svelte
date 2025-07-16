@@ -22,7 +22,7 @@
 		}
 	};
 
-	const config = statusConfig[status];
+	const config = $derived(statusConfig[status]);
 </script>
 
 <span

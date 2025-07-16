@@ -480,3 +480,57 @@ func (r *UserRepository) GetActiveDriversWithLocations(ctx context.Context) ([]*
 
 	return drivers, nil
 }
+
+// GetAllDrivers retrieves all drivers ordered by last connection
+func (r *UserRepository) GetAllDrivers(ctx context.Context) ([]*user.Driver, error) {
+	query := `
+		SELECT 
+			u.user_id,
+			u.email,
+			ud.first_name,
+			ud.last_name,
+			ud.phone_number,
+			u.role,
+			ud.last_connection,
+			u.created_at,
+			u.updated_at
+		FROM users u
+		INNER JOIN users_data ud ON u.user_id = ud.user_id
+		WHERE u.role = 'driver'
+		ORDER BY ud.last_connection DESC
+	`
+
+	rows, err := r.db.Pool.Query(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query drivers: %w", err)
+	}
+	defer rows.Close()
+
+	var drivers []*user.Driver
+	for rows.Next() {
+		var driver user.Driver
+
+		err := rows.Scan(
+			&driver.UserID,
+			&driver.Email,
+			&driver.FirstName,
+			&driver.LastName,
+			&driver.PhoneNumber,
+			&driver.Role,
+			&driver.LastConnection,
+			&driver.CreatedAt,
+			&driver.UpdatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan driver: %w", err)
+		}
+
+		drivers = append(drivers, &driver)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("row iteration error: %w", err)
+	}
+
+	return drivers, nil
+}

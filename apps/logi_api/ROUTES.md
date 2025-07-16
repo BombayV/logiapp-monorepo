@@ -119,7 +119,7 @@ Authorization: Bearer <token>
   "password": "password123",
   "first_name": "John",
   "last_name": "Doe",
-  "phone": "+1234567890",
+  "phone_number": "+1234567890",
   "role": "driver"
 }
 ```
@@ -200,7 +200,7 @@ Authorization: Bearer <token>
 [
   {
     "order_id": "order-uuid",
-    "order_number": "ORD-001",
+    "order_number": "123456",
     "email": "customer@example.com",
     "address": "123 Main St, City, State",
     "status": "pending",
@@ -278,6 +278,29 @@ Authorization: Bearer <token>
 }
 ```
 
+### GET `/v1/users/drivers`
+**Description**: Get all drivers ordered by last connection  
+**Authentication**: Required (sales)  
+**Response**:
+```json
+{
+  "drivers": [
+    {
+      "user_id": "driver-uuid",
+      "email": "driver@example.com",
+      "first_name": "John",
+      "last_name": "Doe",
+      "phone_number": "+1234567890",
+      "role": "driver",
+      "last_connection": "2023-12-01T14:25:00Z",
+      "created_at": "2023-11-01T10:00:00Z",
+      "updated_at": "2023-12-01T14:25:00Z"
+    }
+  ],
+  "count": 1
+}
+```
+
 ## Order Management Routes
 
 ### POST `/v1/orders`
@@ -288,14 +311,17 @@ Authorization: Bearer <token>
 {
   "email": "customer@example.com",
   "address": "123 Main St, City, State",
-  "order_number": "ORD-001"
+  "order_number": "123456"
 }
 ```
+**Notes**: 
+- `order_number` must be 1-6 characters long and contain only numbers
+
 **Response**:
 ```json
 {
   "order_id": "order-uuid",
-  "order_number": "ORD-20231201-143022-abc12345",
+  "order_number": "123456",
   "created_by": "user-uuid",
   "created_by_username": "sales@example.com",
   "assigned_to": null,
@@ -304,6 +330,20 @@ Authorization: Bearer <token>
   "status": "pending",
   "created_at": "2023-12-01T14:30:22Z",
   "updated_at": "2023-12-01T14:30:22Z"
+}
+```
+
+**Error Responses**:
+- **400 Bad Request**: Invalid order_number format
+```json
+{
+  "error": "order_number must contain only numbers"
+}
+```
+- **409 Conflict**: Duplicate order number
+```json
+{
+  "error": "Ya existe una orden con este número"
 }
 ```
 
@@ -320,7 +360,7 @@ Authorization: Bearer <token>
   "orders": [
     {
       "order_id": "order-uuid",
-      "order_number": "ORD-20231201-143022-abc12345",
+      "order_number": "123456",
       "created_by": "user-uuid",
       "created_by_username": "sales@example.com",
       "assigned_to": "driver-uuid",
@@ -345,7 +385,7 @@ Authorization: Bearer <token>
 ```json
 {
   "order_id": "order-uuid",
-  "order_number": "ORD-20231201-143022-abc12345",
+  "order_number": "123456",
   "created_by": "user-uuid",
   "created_by_username": "sales@example.com",
   "assigned_to": "driver-uuid",
@@ -371,11 +411,16 @@ Authorization: Bearer <token>
   "status": "in_progress"
 }
 ```
+
+**Notes**:
+- `assigned_to` can be set to `null` to unassign the order from any driver
+- All fields are optional - only provided fields will be updated
+
 **Response**:
 ```json
 {
   "order_id": "order-uuid",
-  "order_number": "ORD-20231201-143022-abc12345",
+  "order_number": "123456",
   "created_by": "user-uuid",
   "created_by_username": "sales@example.com",
   "assigned_to": "driver-uuid",
@@ -547,6 +592,10 @@ All endpoints may return the following error responses:
 }
 ```
 
+Common validation errors:
+- `order_number must contain only numbers` - Order number contains non-numeric characters
+- Various field validation errors based on binding rules
+
 ### 401 Unauthorized
 ```json
 {
@@ -587,6 +636,7 @@ All endpoints may return the following error responses:
 
 - **UUID**: Standard UUID format (e.g., `123e4567-e89b-12d3-a456-426614174000`)
 - **Timestamp**: ISO 8601 format (e.g., `2023-12-01T14:30:22Z`)
+- **Order Number**: 1-6 digit numeric string (e.g., `"123456"`, `"1"`, `"000123"`)
 - **Coordinates**: Decimal degrees (e.g., `40.7128` for latitude, `-74.0060` for longitude)
 - **Order Status**: `pending`, `in_progress`, `completed`, `cancelled`
 - **User Role**: `admin`, `driver`, `sales`

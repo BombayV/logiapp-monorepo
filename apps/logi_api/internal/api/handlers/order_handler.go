@@ -2,8 +2,12 @@ package handlers
 
 import (
 	ordersCore "bombayv/logiapp-monorepo/logi_api/internal/core/orders"
+	"encoding/json"
+	"fmt"
 	"net/http"
+	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -21,7 +25,7 @@ func NewOrderHandler(service *ordersCore.Service) *OrderHandler {
 type CreateOrderRequest struct {
 	Email       string `json:"email" binding:"required,email"`
 	Address     string `json:"address" binding:"required"`
-	OrderNumber string `json:"order_number" binding:"required"`
+	OrderNumber string `json:"order_number" binding:"required,min=1,max=6"`
 }
 
 type UpdateOrderRequest struct {
@@ -53,8 +57,20 @@ func (h *OrderHandler) CreateOrder(c *gin.Context) {
 		return
 	}
 
+	// Validate order_number: must be numeric only
+	if !regexp.MustCompile(`^[0-9]+$`).MatchString(req.OrderNumber) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "order_number must contain only numbers"})
+		return
+	}
+
 	order, err := h.service.CreateOrder(c.Request.Context(), req.Email, req.Address, req.OrderNumber)
 	if err != nil {
+		// Check if it's a duplicate order number error
+		if strings.Contains(err.Error(), "duplicate key value violates unique constraint") &&
+			strings.Contains(err.Error(), "order_number") {
+			c.JSON(http.StatusConflict, gin.H{"error": "Ya existe una orden con este número"})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -151,11 +167,44 @@ func (h *OrderHandler) UpdateOrder(c *gin.Context) {
 		return
 	}
 
+	// Read the request body
+	body, err := c.GetRawData()
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to read request body"})
+		return
+	}
+
+	// Parse as structured request
 	var req UpdateOrderRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
+	if err := json.Unmarshal(body, &req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
+	// Parse as raw JSON to check field presence
+	var rawJSON map[string]interface{}
+	if err := json.Unmarshal(body, &rawJSON); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Debug logging
+	fmt.Printf("Received update request: %+v\n", req)
+	fmt.Printf("Raw JSON: %+v\n", rawJSON)
+
+	var assignedToProvided bool
+	var assignedToValue string
+
+	// Check if assigned_to field exists in the JSON (even if null)
+	if assignedToRaw, exists := rawJSON["assigned_to"]; exists {
+		assignedToProvided = true
+		if assignedToRaw != nil {
+			assignedToValue = assignedToRaw.(string)
+		}
+		// If assignedToRaw is nil, assignedToValue stays empty string (for null assignment)
+	}
+
+	fmt.Printf("AssignedTo provided: %t, value: '%s'\n", assignedToProvided, assignedToValue)
 
 	// Validate status if provided
 	if req.Status != nil {
@@ -172,11 +221,7 @@ func (h *OrderHandler) UpdateOrder(c *gin.Context) {
 		}
 	}
 
-	assignedTo := ""
-	if req.AssignedTo != nil {
-		assignedTo = *req.AssignedTo
-	}
-
+	assignedTo := assignedToValue
 	address := ""
 	if req.Address != nil {
 		address = *req.Address
@@ -187,7 +232,7 @@ func (h *OrderHandler) UpdateOrder(c *gin.Context) {
 		status = *req.Status
 	}
 
-	order, err := h.service.UpdateOrder(c.Request.Context(), orderID, assignedTo, address, status)
+	order, err := h.service.UpdateOrder(c.Request.Context(), orderID, assignedTo, assignedToProvided, address, status)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

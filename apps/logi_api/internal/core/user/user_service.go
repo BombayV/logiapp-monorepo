@@ -338,6 +338,31 @@ func (s *Service) GetActiveDriversWithLocations(ctx context.Context) ([]*DriverL
 	return drivers, nil
 }
 
+// GetAllDrivers retrieves all drivers ordered by last connection
+func (s *Service) GetAllDrivers(ctx context.Context) ([]*Driver, error) {
+	// Try to get from cache first
+	cacheKey := "all_drivers"
+
+	var cached []*Driver
+	if err := s.cache.Get(ctx, cacheKey, &cached); err == nil {
+		return cached, nil
+	}
+
+	// If not in cache, get from database
+	drivers, err := s.repo.GetAllDrivers(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// Cache the result for 5 minutes (reasonable TTL for driver list)
+	if cacheErr := s.cache.Set(ctx, cacheKey, drivers, 5*time.Minute); cacheErr != nil {
+		// Log cache error but don't fail the request
+		fmt.Printf("Failed to cache all drivers: %v\n", cacheErr)
+	}
+
+	return drivers, nil
+}
+
 // ResetPassword changes a user's password after verifying the current password
 func (s *Service) ResetPassword(ctx context.Context, userID, currentPassword, newPassword string) error {
 	// Validate new password strength

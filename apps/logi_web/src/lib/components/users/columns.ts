@@ -1,7 +1,7 @@
 import type { ColumnDef } from '@tanstack/table-core';
 import { renderComponent } from '../ui/data-table';
 import { Mail } from '@lucide/svelte';
-import DataTableEmailButton from './data-table-email-button.svelte';
+import DataTableSortableHeader from './data-table-sortable-header.svelte';
 import DataTableActions from './data-table-actions.svelte';
 
 export type User = {
@@ -24,9 +24,13 @@ export const columns: ColumnDef<User>[] = [
 	{
 		accessorKey: 'email',
 		header: ({ column }) =>
-			renderComponent(DataTableEmailButton, {
-				onclick: column.getToggleSortingHandler()
-			})
+			renderComponent(DataTableSortableHeader, {
+				onclick: column.getToggleSortingHandler(),
+				sortDirection: column.getIsSorted(),
+				text: 'Email'
+			}),
+		enableSorting: true,
+		sortingFn: 'alphanumeric'
 	},
 	{
 		accessorKey: 'first_name',
@@ -50,7 +54,14 @@ export const columns: ColumnDef<User>[] = [
 	},
 	{
 		accessorKey: 'last_connection',
-		header: 'Última conexión',
+		header: ({ column }) =>
+			renderComponent(DataTableSortableHeader, {
+				onclick: column.getToggleSortingHandler(),
+				sortDirection: column.getIsSorted(),
+				text: 'Última conexión'
+			}),
+		enableSorting: true,
+		sortingFn: 'datetime',
 		cell: ({ getValue }) => {
 			const date = new Date(getValue<string>());
 			return `${date.toLocaleString()}`;

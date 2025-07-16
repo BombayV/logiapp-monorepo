@@ -53,6 +53,7 @@ func SetupRouter(db *database.DB, redisCache *cache.Cache, userHandler *handlers
 		v1.GET("/users/location", middleware.AuthMiddleware([]string{"driver"}), userHandler.GetLocation)
 
 		v1.GET("/users/drivers/active", middleware.AuthMiddleware([]string{"sales"}), userHandler.GetActiveDriversWithLocations)
+		v1.GET("/users/drivers", middleware.AuthMiddleware([]string{"sales"}), userHandler.GetAllDrivers)
 
 		// Get all users (admin only)
 		v1.GET("/users", middleware.AuthMiddleware([]string{"sales"}), userHandler.GetUsers)
