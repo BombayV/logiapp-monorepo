@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:logi_app/driver.dart';
 import 'package:logi_app/auth/auth.dart';
 import 'package:logi_app/config/constants.dart';
+import 'package:logi_app/services/location_service.dart';
 
 void main() {
   runApp(const MyApp());
@@ -110,9 +111,12 @@ class _LoginPageState extends State<LoginPage> {
 
       if (mounted) {
         if (loginResult['success'] == true) {
+          // Enviar ubicación automáticamente después del login exitoso
+          LocationService().requestLocationAndSend();
+
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => DriverPage()),
+            MaterialPageRoute(builder: (context) => const DriverPage()),
           );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(

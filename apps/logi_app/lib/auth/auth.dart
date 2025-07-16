@@ -73,7 +73,7 @@ class AuthService {
       final token = await secureStorage.getToken();
       if (token == null) return false;
 
-      final response = await post(
+      final response = await put(
         Uri.parse('$apiUrl/v1/users/location'),
         headers: {
           'Content-Type': 'application/json',

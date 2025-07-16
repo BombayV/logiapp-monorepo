@@ -5,14 +5,57 @@ import 'package:logi_app/main.dart';
 import 'package:logi_app/orderdetails.dart';
 import 'package:logi_app/auth/auth.dart';
 import 'package:logi_app/secureStorage/flutter_secure_storage.dart';
+import 'package:logi_app/services/location_service.dart';
 
-class DriverPage extends StatelessWidget {
+class DriverPage extends StatefulWidget {
+  const DriverPage({super.key});
+
+  @override
+  State<DriverPage> createState() => _DriverPageState();
+}
+
+class _DriverPageState extends State<DriverPage> with WidgetsBindingObserver {
   final SecureStorageService secureStorage = SecureStorageService();
   late final AuthService authService;
 
-  DriverPage({super.key}) {
+  @override
+  void initState() {
+    super.initState();
     authService = AuthService(apiUrl: apiBaseUrl);
+
+    // Agregar observer para detectar cambios en el estado de la aplicación
+    WidgetsBinding.instance.addObserver(this);
+
+    // Enviar ubicación cuando se carga la pantalla
+    _sendLocationOnResume();
   }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+
+    // Enviar ubicación cuando la aplicación se reanude
+    if (state == AppLifecycleState.resumed) {
+      _sendLocationOnResume();
+    }
+  }
+
+  Future<void> _sendLocationOnResume() async {
+    try {
+      // Enviar ubicación automáticamente cuando se reanude la aplicación
+      await LocationService().requestLocationAndSend();
+    } catch (e) {
+      print('Error al enviar ubicación en reanudación: $e');
+    }
+  }
+
+  // Future<Object> get
 
   Future<String> getUserFullName() async {
     try {
@@ -43,14 +86,22 @@ class DriverPage extends StatelessWidget {
       } else {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Error al cerrar sesión')),
+            const SnackBar(
+              content: Text('Error al cerrar sesión en el servidor'),
+              backgroundColor: Colors.red,
+              duration: Duration(seconds: 4),
+            ),
           );
         }
       }
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
+          SnackBar(
+            content: Text('Error de conexión al cerrar sesión: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
         );
       }
     }
