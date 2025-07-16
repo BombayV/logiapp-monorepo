@@ -8,7 +8,6 @@
 	import * as Select from '@/components/ui/select';
 	import { columns, type User } from '@/components/users/columns';
 	import { toast } from 'svelte-sonner';
-	import { enhance } from '$app/forms';
 	import type { UserData } from '../../../app';
 
 	let { data, form }: { data: { user: UserData; users: User[] }; form: ActionData } = $props();
@@ -28,7 +27,7 @@
 </script>
 
 <svelte:head>
-	<title>LogiApp | Panel de control</title>
+	<title>LogiApp | Dashboard</title>
 	<meta
 		name="description"
 		content="Bienvenido a tu panel de control en LogiApp. Aquí puedes gestionar tus órdenes y ver tu información de usuario."
