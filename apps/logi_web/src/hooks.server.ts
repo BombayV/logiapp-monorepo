@@ -49,6 +49,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 	// --- Route Protection Logic ---
 
 	const isUserLoggedIn = !!event.locals.user;
+	const userRole = event.locals.user?.role;
 	const isTryingToAccessApp = event.url.pathname.startsWith('/auth/dashboard');
 
 	// If user is not logged in and tries to access a protected route, redirect to login
@@ -58,7 +59,20 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 	// If user is logged in and tries to access the login page, redirect to the dashboard
 	if (isUserLoggedIn && event.url.pathname === '/auth/login') {
+		// Check if user is a driver - drivers should not access the web app
+		if (userRole === 'driver') {
+			// Clear the session and redirect to login with error message
+			event.cookies.delete('session', { path: '/' });
+			throw redirect(303, '/auth/login?error=drivers_not_allowed');
+		}
 		throw redirect(303, '/auth/dashboard');
+	}
+
+	// If user is logged in and tries to access the dashboard, check if they're a driver
+	if (isUserLoggedIn && isTryingToAccessApp && userRole === 'driver') {
+		// Clear the session and redirect to login with error message
+		event.cookies.delete('session', { path: '/' });
+		throw redirect(303, '/auth/login?error=drivers_not_allowed');
 	}
 
 	// Resolve the request and continue to the page

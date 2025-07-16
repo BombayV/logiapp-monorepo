@@ -189,8 +189,16 @@ func (s *Service) FindByUserID(ctx context.Context, userID string) ([]*Order, er
 	return orders, nil
 }
 
-// FindByAssignedTo retrieves all orders assigned to a specific user (driver).
+// FindByAssignedTo retrieves pending and in_progress orders assigned to a specific user (driver).
 func (s *Service) FindByAssignedTo(ctx context.Context, userID string) ([]*Order, error) {
+	// Try to get from cache first
+	cacheKey := fmt.Sprintf("orders_assigned_to:%s", userID)
+
+	var cached []*Order
+	if err := s.cache.Get(ctx, cacheKey, &cached); err == nil {
+		return cached, nil
+	}
+
 	// Validate that the user exists
 	exists, err := s.userRepo.Exists(ctx, userID)
 	if err != nil {
@@ -200,6 +208,7 @@ func (s *Service) FindByAssignedTo(ctx context.Context, userID string) ([]*Order
 		return nil, fmt.Errorf("user not found")
 	}
 
+	// If not in cache, get from database
 	orders, err := s.repo.FindByAssignedTo(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve assigned orders: %w", err)
@@ -208,6 +217,12 @@ func (s *Service) FindByAssignedTo(ctx context.Context, userID string) ([]*Order
 	// Populate username fields for all orders
 	if err := s.populateUsernamesForOrders(ctx, orders); err != nil {
 		return nil, fmt.Errorf("failed to populate usernames: %w", err)
+	}
+
+	// Cache the result for 1 minute (short TTL since orders change frequently)
+	if cacheErr := s.cache.Set(ctx, cacheKey, orders, 1*time.Minute); cacheErr != nil {
+		// Log cache error but don't fail the request
+		fmt.Printf("Failed to cache assigned orders for user %s: %v\n", userID, cacheErr)
 	}
 
 	return orders, nil
@@ -529,5 +544,10 @@ func (s *Service) invalidateOrderCache(ctx context.Context, orderID string) {
 	// Invalidate paginated orders cache (all combinations of limit/offset)
 	if err := s.cache.DeletePattern(ctx, "orders_paginated:*"); err != nil {
 		fmt.Printf("Failed to invalidate paginated orders cache: %v\n", err)
+	}
+
+	// Invalidate assigned orders cache (all users)
+	if err := s.cache.DeletePattern(ctx, "orders_assigned_to:*"); err != nil {
+		fmt.Printf("Failed to invalidate assigned orders cache: %v\n", err)
 	}
 }

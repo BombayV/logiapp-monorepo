@@ -403,7 +403,7 @@ func (h *OrderHandler) DeleteOrderItem(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Order item deleted successfully"})
 }
 
-// GetOrdersByUserID retrieves orders for a specific user (driver)
+// GetOrdersByUserID retrieves pending and in_progress orders for a specific user (driver)
 func (h *OrderHandler) GetOrdersByUserID(c *gin.Context) {
 	userID := c.Param("id")
 	if userID == "" {
