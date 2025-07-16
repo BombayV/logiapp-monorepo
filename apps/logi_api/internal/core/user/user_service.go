@@ -80,7 +80,10 @@ func (s *Service) CreateUser(ctx context.Context, email, password, firstName, la
 		return nil, err
 	}
 
-	// 7. Return the created user.
+	// 7. Invalidate user-related caches
+	s.invalidateUserCache(ctx, userID)
+
+	// 8. Return the created user.
 	return user, nil
 }
 
@@ -420,5 +423,10 @@ func (s *Service) invalidateUserCache(ctx context.Context, userID string) {
 	// Invalidate active drivers cache if user is a driver
 	if err := s.cache.Delete(ctx, "active_drivers_locations"); err != nil {
 		fmt.Printf("Failed to invalidate active drivers cache: %v\n", err)
+	}
+
+	// Invalidate all drivers cache
+	if err := s.cache.Delete(ctx, "all_drivers"); err != nil {
+		fmt.Printf("Failed to invalidate all drivers cache: %v\n", err)
 	}
 }

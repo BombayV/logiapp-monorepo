@@ -34,14 +34,20 @@ Extended the existing cache implementation with generic methods:
    - TTL: 30 seconds
    - Caches active driver locations (short TTL for real-time data)
 
+4. **GetAllDrivers** - Cache key: `all_drivers`
+   - TTL: 5 minutes
+   - Caches all drivers ordered by last connection
+
 ### Cache Invalidation
 
 The `invalidateUserCache` method handles:
 - Individual user profile cache
 - User list caches (all pagination combinations)
 - Active drivers cache
+- All drivers cache
 
 **Triggered on:**
+- User creation
 - User password reset
 - User profile updates
 - User location updates
