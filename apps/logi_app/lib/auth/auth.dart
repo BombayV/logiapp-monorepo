@@ -125,4 +125,32 @@ class AuthService {
       return false;
     }
   }
+
+  Future<Map<String, dynamic>?> getOrdersByDriver() async {
+    try {
+      final token = await secureStorage.getToken();
+      if (token == null) return null;
+
+      final userDataString = await secureStorage.getUserData();
+      final userData = jsonDecode(userDataString!);
+      final driverId = userData['user_id'];
+
+      final response = await get(
+        Uri.parse('$apiUrl/v1/users/$driverId/orders'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token'
+        },
+      );
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        return null;
+      }
+    } catch (e) {
+      print('Error al obtener pedidos del conductor: $e');
+      return null;
+    }
+  }
 }

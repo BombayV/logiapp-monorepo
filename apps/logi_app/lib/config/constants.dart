@@ -1,1 +1,1 @@
-const String apiBaseUrl = 'http://192.168.1.93:8080';
+const String apiBaseUrl = 'https://spatial-rosmunda-bombay-e0c7d398.koyeb.app';

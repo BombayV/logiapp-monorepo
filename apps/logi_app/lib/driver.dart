@@ -6,6 +6,7 @@ import 'package:logi_app/orderdetails.dart';
 import 'package:logi_app/auth/auth.dart';
 import 'package:logi_app/secureStorage/flutter_secure_storage.dart';
 import 'package:logi_app/services/location_service.dart';
+import 'package:logi_app/models/order.dart';
 
 class DriverPage extends StatefulWidget {
   const DriverPage({super.key});
@@ -17,6 +18,8 @@ class DriverPage extends StatefulWidget {
 class _DriverPageState extends State<DriverPage> with WidgetsBindingObserver {
   final SecureStorageService secureStorage = SecureStorageService();
   late final AuthService authService;
+  List<Order> orders = [];
+  bool isLoading = true;
 
   @override
   void initState() {
@@ -28,6 +31,9 @@ class _DriverPageState extends State<DriverPage> with WidgetsBindingObserver {
 
     // Enviar ubicación cuando se carga la pantalla
     _sendLocationOnResume();
+
+    // Cargar órdenes al inicializar
+    getOrdersByDriver();
   }
 
   @override
@@ -55,7 +61,45 @@ class _DriverPageState extends State<DriverPage> with WidgetsBindingObserver {
     }
   }
 
-  // Future<Object> get
+  Future<void> getOrdersByDriver() async {
+    try {
+      setState(() {
+        isLoading = true;
+      });
+
+      final ordersData = await authService.getOrdersByDriver();
+
+      if (ordersData != null && ordersData['orders'] is List) {
+        final ordersList = ordersData['orders'] as List;
+        setState(() {
+          orders = ordersList
+              .map((orderJson) => Order.fromJson(orderJson as Map<String, dynamic>))
+              .toList();
+          isLoading = false;
+        });
+      } else {
+        setState(() {
+          orders = [];
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('Error al obtener pedidos del conductor: $e');
+      setState(() {
+        orders = [];
+        isLoading = false;
+      });
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al obtener pedidos: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    }
+  }
 
   Future<String> getUserFullName() async {
     try {
@@ -119,10 +163,10 @@ class _DriverPageState extends State<DriverPage> with WidgetsBindingObserver {
               borderRadius: BorderRadius.circular(10),
               child: Image.asset(
                 'assets/logo.png',
-                height: 32,
-                width: 32,
+                height: 40,
+                width: 40,
                 errorBuilder: (context, error, stackTrace) {
-                  return Icon(Icons.local_shipping, size: 32);
+                  return Icon(Icons.local_shipping, size: 40);
                 },
               ),
             ),
@@ -177,81 +221,260 @@ class _DriverPageState extends State<DriverPage> with WidgetsBindingObserver {
           ),
         ],
       ),
-      body: Center(
+      body: RefreshIndicator(
+        onRefresh: getOrdersByDriver,
         child: Padding(
           padding: const EdgeInsets.all(16.0),
-          child: Column(
-            children: [
-              _buildOrderCard(context),
-              // Agregar más contenido aquí según sea necesario
-            ],
-          ),
+          child: isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : orders.isEmpty
+                  ? const Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.inbox_outlined,
+                            size: 80,
+                            color: Colors.grey,
+                          ),
+                          SizedBox(height: 16),
+                          Text(
+                            'No hay órdenes asignadas',
+                            style: TextStyle(
+                              fontSize: 18,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      itemCount: orders.length,
+                      itemBuilder: (context, index) {
+                        final order = orders[index];
+                        return _buildOrderCard(context, order);
+                      },
+                    ),
         ),
       ),
     );
   }
 
-  Widget _buildOrderCard(BuildContext context) {
+  Widget _buildOrderCard(BuildContext context, Order order) {
     return Card(
+      margin: const EdgeInsets.only(bottom: 16),
       elevation: 4,
-      child: InkWell(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => OrderDetailsPage(
-                orderId: '12345',
-                status: 'Pendiente',
-              ),
-            ),
-          );
-        },
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Pedido #12345',
-                    style: TextStyle(
-                      fontSize: 18,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Orden #${order.orderNumber}',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: order.statusColor,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    order.statusDisplayName,
+                    style: const TextStyle(
+                      color: Colors.white,
                       fontWeight: FontWeight.bold,
+                      fontSize: 12,
                     ),
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.orange,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: const Text(
-                      'Pendiente',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                const Icon(Icons.email, size: 16, color: Colors.grey),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    order.email,
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.location_on, size: 16, color: Colors.grey),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    order.address,
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Icon(Icons.access_time, size: 16, color: Colors.grey),
+                const SizedBox(width: 8),
+                Text(
+                  'Creado: ${_formatDate(order.createdAt)}',
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => OrderDetailsPage(order: order),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.visibility),
+                    label: const Text('Ver Detalles'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
                       ),
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              const Text('Toca para ver detalles'),
-              const SizedBox(height: 8),
-              const Row(
-                children: [
-                  Icon(Icons.location_on, size: 16),
-                  SizedBox(width: 4),
-                  Text('Dirección de entrega'),
-                ],
-              ),
-            ],
-          ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: order.status == 'delivered' || order.status == 'cancelled'
+                        ? null
+                        : () {
+                            _updateOrderStatus(order);
+                          },
+                    icon: const Icon(Icons.update),
+                    label: const Text('Actualizar'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
-
       ),
     );
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+  }
+
+  Future<void> _updateOrderStatus(Order order) async {
+    // Mostrar dialog para actualizar estado
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Actualizar Orden #${order.orderNumber}'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              title: const Text('En Progreso'),
+              leading: Radio(
+                value: 'in_progress',
+                groupValue: order.status,
+                onChanged: (value) {
+                  Navigator.of(context).pop();
+                  _performStatusUpdate(order, 'in_progress');
+                },
+              ),
+            ),
+            ListTile(
+              title: const Text('Entregado'),
+              leading: Radio(
+                value: 'delivered',
+                groupValue: order.status,
+                onChanged: (value) {
+                  Navigator.of(context).pop();
+                  _performStatusUpdate(order, 'delivered');
+                },
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancelar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _performStatusUpdate(Order order, String newStatus) async {
+    try {
+      // Aquí deberías implementar la llamada al API para actualizar el estado
+      // final success = await authService.updateOrderStatus(order.orderId, newStatus);
+
+      // Por ahora, simularemos que la actualización fue exitosa
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Estado actualizado a: ${_getStatusDisplayName(newStatus)}'),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      // Recargar órdenes después de actualizar
+      getOrdersByDriver();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al actualizar estado: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  String _getStatusDisplayName(String status) {
+    switch (status.toLowerCase()) {
+      case 'pending':
+        return 'Pendiente';
+      case 'in_progress':
+        return 'En Progreso';
+      case 'delivered':
+        return 'Entregado';
+      case 'cancelled':
+        return 'Cancelado';
+      default:
+        return status;
+    }
   }
 }

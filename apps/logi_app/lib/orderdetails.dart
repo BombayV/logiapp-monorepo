@@ -4,15 +4,14 @@ import 'package:logi_app/main.dart';
 import 'package:logi_app/config/constants.dart';
 import 'package:logi_app/auth/auth.dart';
 import 'package:logi_app/secureStorage/flutter_secure_storage.dart';
+import 'package:logi_app/models/order.dart';
 
 class OrderDetailsPage extends StatefulWidget {
-  final String orderId;
-  final String status;
+  final Order order;
 
   const OrderDetailsPage({
     super.key,
-    required this.orderId,
-    required this.status,
+    required this.order,
   });
 
   @override
@@ -29,7 +28,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
   void initState() {
     super.initState();
     authService = AuthService(apiUrl: apiBaseUrl);
-    currentStatus = widget.status;
+    currentStatus = widget.order.status;
   }
 
   Future<String> getUserFullName() async {
@@ -80,36 +79,62 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
     });
 
     try {
-      // Simular actualización del estado del pedido
+      // Aquí deberías implementar la llamada al API para actualizar el estado
+      // final success = await authService.updateOrderStatus(widget.order.orderId, newStatus);
+
+      // Simular delay de red
       await Future.delayed(const Duration(seconds: 1));
 
       setState(() {
         currentStatus = currentStatus == 'Pendiente' ? 'En Proceso' : 'Entregado';
+        _isUpdatingStatus = false;
       });
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Estado actualizado a: $currentStatus'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Estado actualizado a: ${_getStatusDisplayName(currentStatus)}'),
+          backgroundColor: Colors.green,
+        ),
+      );
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al actualizar estado: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isUpdatingStatus = false;
-        });
-      }
+      setState(() {
+        _isUpdatingStatus = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al actualizar estado: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _sendCurrentLocation() async {
+    try {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Enviando ubicación...'),
+          backgroundColor: Colors.blue,
+        ),
+      );
+
+      // Aquí deberías implementar el envío de ubicación
+      // await LocationService().requestLocationAndSend();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Ubicación enviada correctamente'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al enviar ubicación: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -126,36 +151,30 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
     }
   }
 
+  String _formatDate(DateTime date) {
+    return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+  }
+
+  String _getStatusDisplayName(String status) {
+    switch (status.toLowerCase()) {
+      case 'pending':
+        return 'Pendiente';
+      case 'in_progress':
+        return 'En Progreso';
+      case 'delivered':
+        return 'Entregado';
+      case 'cancelled':
+        return 'Cancelado';
+      default:
+        return status;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        automaticallyImplyLeading: false,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.start,
-          children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: Image.asset(
-                'assets/logo.png',
-                height: 32,
-                width: 32,
-                errorBuilder: (context, error, stackTrace) {
-                  return const Icon(Icons.local_shipping, size: 32);
-                },
-              ),
-            ),
-            const SizedBox(width: 10),
-            const Text(
-              'LogiApp',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-          ],
-        ),
+        title: Text('Orden #${widget.order.orderNumber}'),
         actions: [
           FutureBuilder<String>(
             future: getUserFullName(),
@@ -201,216 +220,185 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
         ],
       ),
       body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            children: [
-              _buildOrderInfoCard(),
-              const SizedBox(height: 16),
-              _buildDeliveryAddressCard(),
-              const SizedBox(height: 16),
-              _buildProductsCard(),
-              const SizedBox(height: 24),
-              _buildStatusButton(),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildOrderInfoCard() {
-    return Card(
-      elevation: 4,
-      child: Container(
         padding: const EdgeInsets.all(16.0),
-        width: double.infinity,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Detalles del Pedido',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'ID del Pedido: ${widget.orderId}',
-                  style: const TextStyle(fontSize: 16),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: _getStatusColor(),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    currentStatus,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDeliveryAddressCard() {
-    return Card(
-      elevation: 4,
-      child: Container(
-        padding: const EdgeInsets.all(16.0),
-        width: double.infinity,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Dirección de Entrega',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            const Row(
-              children: [
-                Icon(Icons.location_on, color: Colors.red),
-                SizedBox(width: 8),
-                Text('Guayacanes', style: TextStyle(fontSize: 16)),
-              ],
-            ),
-            const SizedBox(height: 8),
-            const Row(
-              children: [
-                Icon(Icons.location_city, color: Colors.blue),
-                SizedBox(width: 8),
-                Text('Ciudad: Rumiñahui', style: TextStyle(fontSize: 16)),
-              ],
-            ),
-            const SizedBox(height: 8),
-            const Row(
-              children: [
-                Icon(Icons.map, color: Colors.green),
-                SizedBox(width: 8),
-                Text('Estado: Pichincha', style: TextStyle(fontSize: 16)),
-              ],
-            ),
-            const SizedBox(height: 8),
-            const Row(
-              children: [
-                Icon(Icons.local_post_office, color: Colors.orange),
-                SizedBox(width: 8),
-                Text('Código Postal: 171101', style: TextStyle(fontSize: 16)),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildProductsCard() {
-    return Card(
-      elevation: 4,
-      child: Container(
-        padding: const EdgeInsets.all(16.0),
-        width: double.infinity,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Productos',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            Table(
-              border: TableBorder.all(color: Colors.grey.shade300),
-              children: [
-                TableRow(
-                  decoration: BoxDecoration(color: Colors.grey.shade200),
-                  children: const [
-                    Padding(
-                      padding: EdgeInsets.all(12.0),
-                      child: Text(
-                        'Nombre',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                    Padding(
-                      padding: EdgeInsets.all(12.0),
-                      child: Text(
-                        'Cantidad',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ],
-                ),
-                const TableRow(
+            // Información básica de la orden
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Padding(
-                      padding: EdgeInsets.all(12.0),
-                      child: Text('Producto Example 1'),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Información de la Orden',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: widget.order.statusColor,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            widget.order.statusDisplayName,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    Padding(
-                      padding: EdgeInsets.all(12.0),
-                      child: Text('2', textAlign: TextAlign.center),
-                    ),
+                    const SizedBox(height: 16),
+                    _buildInfoRow('ID de Orden', widget.order.orderId),
+                    _buildInfoRow('Número de Orden', widget.order.orderNumber),
+                    _buildInfoRow('Email del Cliente', widget.order.email),
+                    _buildInfoRow('Dirección', widget.order.address),
+                    _buildInfoRow('Fecha de Creación', _formatDate(widget.order.createdAt)),
+                    _buildInfoRow('Última Actualización', _formatDate(widget.order.updatedAt)),
                   ],
                 ),
-                const TableRow(
-                  children: [
-                    Padding(
-                      padding: EdgeInsets.all(12.0),
-                      child: Text('Producto Example 2'),
-                    ),
-                    Padding(
-                      padding: EdgeInsets.all(12.0),
-                      child: Text('1', textAlign: TextAlign.center),
-                    ),
-                  ],
-                ),
-              ],
+              ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
+            const SizedBox(height: 20),
 
-  Widget _buildStatusButton() {
-    if (currentStatus == 'Entregado') {
-      return const SizedBox.shrink();
-    }
-
-    return SizedBox(
-      width: double.infinity,
-      height: 50,
-      child: ElevatedButton(
-        onPressed: _isUpdatingStatus ? null : _updateOrderStatus,
-        child: _isUpdatingStatus
-            ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                ),
-              )
-            : Text(
-                currentStatus == 'Pendiente'
-                    ? 'Marcar como En Proceso'
-                    : 'Marcar como Entregado',
-                style: const TextStyle(
-                  fontSize: 16,
+            // Botones de acción
+            if (currentStatus != 'delivered' && currentStatus != 'cancelled') ...[
+              const Text(
+                'Actualizar Estado',
+                style: TextStyle(
+                  fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
               ),
+              const SizedBox(height: 16),
+              _buildStatusUpdateButtons(),
+            ],
+
+            const SizedBox(height: 20),
+
+            // Botón de ubicación
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Acciones',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: _sendCurrentLocation,
+                        icon: const Icon(Icons.my_location),
+                        label: const Text('Enviar Mi Ubicación'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              '$label:',
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.grey,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(fontSize: 16),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusUpdateButtons() {
+    return Column(
+      children: [
+        if (currentStatus == 'pending')
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: _isUpdatingStatus ? null : () => _updateOrderStatus(),
+              icon: _isUpdatingStatus
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.play_arrow),
+              label: const Text('Marcar como En Progreso'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+            ),
+          ),
+        if (currentStatus == 'in_progress') ...[
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: _isUpdatingStatus ? null : () => _updateOrderStatus(),
+              icon: _isUpdatingStatus
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.check_circle),
+              label: const Text('Marcar como Entregado'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+            ),
+          ),
+        ],
+      ],
     );
   }
 }
