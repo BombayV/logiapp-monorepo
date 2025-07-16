@@ -91,7 +91,7 @@
 	};
 
 	const goBack = () => {
-		goto('/auth/dashboard');
+		goto('/auth/dashboard/orders');
 	};
 
 	const editOrder = async () => {
@@ -149,11 +149,11 @@
 	};
 </script>
 
-<div class="container mx-auto p-4 sm:p-6 max-w-4xl">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
 	<!-- Header -->
 	<Button variant="outline" size="sm" class="mb-4" onclick={goBack}>
 		<ArrowLeft class="h-4 w-4 mr-2" />
-		Volver al Dashboard
+		Volver a Órdenes
 	</Button>
 	<div class="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
 		<div class="flex items-center gap-4">

@@ -99,6 +99,12 @@ func (s *Service) Login(ctx context.Context, email, password string) (string, er
 		return "", ErrInvalidCredentials
 	}
 
+	// Update the user's last_connection timestamp on successful login
+	if err := s.repo.UpdateLastConnection(ctx, user.UserID); err != nil {
+		// Log error but don't fail the login process
+		fmt.Printf("Failed to update last connection during login for user %s: %v\n", user.UserID, err)
+	}
+
 	return utils.GenerateJWT(user.UserID, user.Role)
 }
 
@@ -308,7 +314,19 @@ func (s *Service) UpdateLocation(ctx context.Context, userID string, latitude, l
 		return fmt.Errorf("longitude must be between -180 and 180")
 	}
 
-	return s.repo.UpdateLocation(ctx, userID, latitude, longitude)
+	// Update location in database
+	err := s.repo.UpdateLocation(ctx, userID, latitude, longitude)
+	if err != nil {
+		return err
+	}
+
+	// Update the user's last_connection timestamp since location update indicates activity
+	if err := s.repo.UpdateLastConnection(ctx, userID); err != nil {
+		// Log error but don't fail the location update process
+		fmt.Printf("Failed to update last connection during location update for user %s: %v\n", userID, err)
+	}
+
+	return nil
 }
 
 // GetLocation retrieves a user's location

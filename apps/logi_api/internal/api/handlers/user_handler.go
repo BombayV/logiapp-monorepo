@@ -289,17 +289,52 @@ func (h *UserHandler) UpdateLocation(c *gin.Context) {
 		return
 	}
 
+	// Use a more flexible struct that can handle both string and numeric values
 	var request struct {
-		Latitude  float64 `json:"latitude" binding:"required"`
-		Longitude float64 `json:"longitude" binding:"required"`
+		Latitude  interface{} `json:"latitude" binding:"required"`
+		Longitude interface{} `json:"longitude" binding:"required"`
 	}
 
 	if err := c.ShouldBindJSON(&request); err != nil {
+		fmt.Println("Error binding request body:", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
 		return
 	}
 
-	err := h.UserService.UpdateLocation(c.Request.Context(), userIDStr, request.Latitude, request.Longitude)
+	// Convert latitude to float64
+	var latitude float64
+	var longitude float64
+	var err error
+
+	// Handle latitude conversion
+	switch v := request.Latitude.(type) {
+	case float64:
+		latitude = v
+	case string:
+		if latitude, err = strconv.ParseFloat(v, 64); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid latitude format"})
+			return
+		}
+	default:
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Latitude must be a number or string"})
+		return
+	}
+
+	// Handle longitude conversion
+	switch v := request.Longitude.(type) {
+	case float64:
+		longitude = v
+	case string:
+		if longitude, err = strconv.ParseFloat(v, 64); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid longitude format"})
+			return
+		}
+	default:
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Longitude must be a number or string"})
+		return
+	}
+
+	err = h.UserService.UpdateLocation(c.Request.Context(), userIDStr, latitude, longitude)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -309,20 +344,14 @@ func (h *UserHandler) UpdateLocation(c *gin.Context) {
 }
 
 // GetLocation handles location retrieval for drivers
-func (h *UserHandler) GetLocation(c *gin.Context) {
-	userID, exists := c.Get("userID")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "User not authenticated"})
+func (h *UserHandler) GetUserLocation(c *gin.Context) {
+	userID := c.Param("id")
+	if userID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "User ID is required"})
 		return
 	}
 
-	userIDStr, ok := userID.(string)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID"})
-		return
-	}
-
-	location, err := h.UserService.GetLocation(c.Request.Context(), userIDStr)
+	location, err := h.UserService.GetLocation(c.Request.Context(), userID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Location not found"})
 		return
