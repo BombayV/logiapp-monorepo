@@ -59,7 +59,7 @@
 					/>
 				</div>
 				{#if form?.error || hasError(data)}
-					{#if form?.error === 'Invalid credentials.' || (hasError(data) && data.error === 'Invalid credentials.')}
+					{#if form?.error === 'Invalid credentials.'}
 						<p class="text-red-500 text-sm">Email o contraseña incorrectos.</p>
 					{:else}
 						<p class="text-red-500 text-sm">{form?.error || (hasError(data) ? data.error : '')}</p>
