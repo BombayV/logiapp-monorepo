@@ -3,7 +3,7 @@
 	import { page } from '$app/state';
 	import { toast } from 'svelte-sonner';
 	import { fly, fade } from 'svelte/transition';
-	import { Menu, X } from '@lucide/svelte';
+	import { Menu, X, LayoutDashboard, MapPin, Package2 } from '@lucide/svelte';
 
 	let { children } = $props();
 	let mobileMenuOpen = $state(false);
@@ -21,46 +21,49 @@
 	}
 </script>
 
-<div class="min-h-screen bg-gray-50">
+<div class="min-h-screen bg-background">
 	<!-- Navigation Header -->
-	<nav class="bg-white shadow-sm border-b">
+	<nav class="bg-background shadow-sm border-b border-border">
 		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 			<div class="flex justify-between items-center h-16">
 				<div class="flex items-center space-x-8">
 					<a href="/" class="flex items-center justify-center gap-x-2">
 						<img src="/favicon/favicon-32x32.png" alt="LogiApp Logo" width={32} height={32} />
-						<h1 class="text-xl font-bold text-gray-900">LogiApp</h1>
+						<h1 class="text-xl font-bold text-foreground">LogiApp</h1>
 					</a>
 					<!-- Desktop Navigation -->
 					<div class="hidden md:flex space-x-4">
 						<a
 							href="/auth/dashboard"
-							class="px-3 py-2 rounded-md text-sm font-medium transition-colors {isActive(
+							class="px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-2 {isActive(
 								'/auth/dashboard'
 							)
-								? 'bg-blue-100 text-blue-700'
-								: 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'}"
+								? 'bg-primary/10 text-primary border border-primary/20'
+								: 'text-muted-foreground hover:text-foreground hover:bg-muted'}"
 						>
+							<LayoutDashboard class="h-4 w-4" />
 							Dashboard
 						</a>
 						<a
 							href="/auth/dashboard/mapa"
-							class="px-3 py-2 rounded-md text-sm font-medium transition-colors {isActive(
+							class="px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-2 {isActive(
 								'/auth/dashboard/mapa'
 							)
-								? 'bg-blue-100 text-blue-700'
-								: 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'}"
+								? 'bg-primary/10 text-primary border border-primary/20'
+								: 'text-muted-foreground hover:text-foreground hover:bg-muted'}"
 						>
+							<MapPin class="h-4 w-4" />
 							Mapa de Empleados
 						</a>
 						<a
 							href="/auth/dashboard/orders"
-							class="px-3 py-2 rounded-md text-sm font-medium transition-colors {isActive(
+							class="px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-2 {isActive(
 								'/auth/dashboard/orders'
 							)
-								? 'bg-blue-100 text-blue-700'
-								: 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'}"
+								? 'bg-primary/10 text-primary border border-primary/20'
+								: 'text-muted-foreground hover:text-foreground hover:bg-muted'}"
 						>
+							<Package2 class="h-4 w-4" />
 							Órdenes
 						</a>
 					</div>
@@ -81,7 +84,7 @@
 					>
 						<button
 							type="submit"
-							class="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+							class="px-4 py-2 text-sm font-medium text-red-700 bg-red-50 rounded-md hover:bg-red-100 hover:text-red-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-300 transition-all border border-red-200"
 						>
 							Cerrar sesión
 						</button>
@@ -91,7 +94,7 @@
 				<div class="md:hidden">
 					<button
 						onclick={toggleMobileMenu}
-						class="p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
+						class="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary"
 						aria-expanded={mobileMenuOpen}
 						aria-label="Abrir menú de navegación"
 					>
@@ -115,7 +118,7 @@
 		<div class="fixed inset-0 z-50 md:hidden">
 			<!-- Backdrop -->
 			<button
-				class="fixed bg-black/20 inset-0 bg-opacity-50 transition-opacity cursor-default"
+				class="fixed bg-accent/20 inset-0 bg-opacity-50 transition-opacity cursor-default"
 				onclick={closeMobileMenu}
 				onkeydown={(e) => {
 					if (e.key === 'Escape') {
@@ -134,15 +137,17 @@
 				in:fly={{ x: 320, duration: 300 }}
 				out:fly={{ x: 320, duration: 250 }}
 			>
-				<div class="w-full bg-white shadow-xl flex flex-col h-full">
-					<div class="flex items-center justify-between h-16 px-4 border-b flex-shrink-0">
+				<div class="w-full bg-background shadow-xl flex flex-col h-full border-l border-border">
+					<div
+						class="flex items-center justify-between h-16 px-4 border-b border-border flex-shrink-0"
+					>
 						<div class="flex items-center gap-x-2">
 							<img src="/favicon/favicon-32x32.png" alt="LogiApp Logo" width={24} height={24} />
-							<h2 class="text-lg font-semibold text-gray-900">LogiApp</h2>
+							<h2 class="text-lg font-semibold text-foreground">LogiApp</h2>
 						</div>
 						<button
 							onclick={closeMobileMenu}
-							class="p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100"
+							class="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted"
 							aria-label="Cerrar menú de navegación"
 						>
 							<X class="w-6 h-6" />
@@ -154,40 +159,43 @@
 						<a
 							href="/auth/dashboard"
 							onclick={closeMobileMenu}
-							class="flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors {isActive(
+							class="flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors gap-3 {isActive(
 								'/auth/dashboard'
 							)
-								? 'bg-blue-100 text-blue-700'
-								: 'text-gray-700 hover:bg-gray-100'}"
+								? 'bg-primary/10 text-primary border border-primary/20'
+								: 'text-muted-foreground hover:text-foreground hover:bg-muted'}"
 						>
+							<LayoutDashboard class="h-4 w-4" />
 							Dashboard
 						</a>
 						<a
 							href="/auth/dashboard/mapa"
 							onclick={closeMobileMenu}
-							class="flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors {isActive(
+							class="flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors gap-3 {isActive(
 								'/auth/dashboard/mapa'
 							)
-								? 'bg-blue-100 text-blue-700'
-								: 'text-gray-700 hover:bg-gray-100'}"
+								? 'bg-primary/10 text-primary border border-primary/20'
+								: 'text-muted-foreground hover:text-foreground hover:bg-muted'}"
 						>
+							<MapPin class="h-4 w-4" />
 							Mapa de Empleados
 						</a>
 						<a
 							href="/auth/dashboard/orders"
 							onclick={closeMobileMenu}
-							class="flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors {isActive(
+							class="flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors gap-3 {isActive(
 								'/auth/dashboard/orders'
 							)
-								? 'bg-blue-100 text-blue-700'
-								: 'text-gray-700 hover:bg-gray-100'}"
+								? 'bg-primary/10 text-primary border border-primary/20'
+								: 'text-muted-foreground hover:text-foreground hover:bg-muted'}"
 						>
+							<Package2 class="h-4 w-4" />
 							Órdenes
 						</a>
 					</nav>
 
 					<!-- Logout Button -->
-					<div class="p-4 border-t flex-shrink-0">
+					<div class="p-4 border-t border-border flex-shrink-0">
 						<form
 							method="POST"
 							action="/auth/dashboard?/logout"
@@ -202,7 +210,7 @@
 						>
 							<button
 								type="submit"
-								class="w-full px-4 py-3 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+								class="w-full px-4 py-3 text-sm font-medium text-red-700 bg-red-50 rounded-lg hover:bg-red-100 hover:text-red-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-300 transition-all border border-red-200"
 							>
 								Cerrar sesión
 							</button>

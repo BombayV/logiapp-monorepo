@@ -7,7 +7,7 @@
 	import * as Dialog from '@/components/ui/dialog';
 	import { Label } from '@/components/ui/label';
 	import { Input } from '@/components/ui/input';
-	import { XCircle, CheckCircle } from '@lucide/svelte';
+	import { XCircle, CheckCircle, Package2, Plus } from '@lucide/svelte';
 	import type { UserData } from '../../../../app';
 	import type { ActionData } from '../$types';
 
@@ -63,12 +63,20 @@
 	}
 </script>
 
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
-	<div class="bg-white rounded-lg shadow-md p-6">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+	<div class="bg-card rounded-lg shadow-md p-6 border border-border">
 		<div class="flex justify-between items-center mb-6">
-			<h1 class="text-3xl font-bold text-gray-800">Órdenes</h1>
+			<div class="flex items-center gap-3">
+				<div class="p-2 bg-primary/10 rounded-lg">
+					<Package2 class="h-6 w-6 text-primary" />
+				</div>
+				<h1 class="text-3xl font-bold text-foreground">Órdenes</h1>
+			</div>
 			<Dialog.Root bind:open={createOrderDialogOpen}>
-				<Dialog.Trigger class={buttonVariants({ variant: 'outline' })}>Crear orden</Dialog.Trigger>
+				<Dialog.Trigger class={buttonVariants({ variant: 'outline' })}>
+					<Plus class="h-4 w-4 mr-2" />
+					Crear orden
+				</Dialog.Trigger>
 				<Dialog.Content class="sm:max-w-[425px]">
 					<form
 						method="POST"

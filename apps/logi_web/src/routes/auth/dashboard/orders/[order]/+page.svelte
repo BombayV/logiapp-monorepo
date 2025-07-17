@@ -149,7 +149,7 @@
 	};
 </script>
 
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
 	<!-- Header -->
 	<Button variant="outline" size="sm" class="mb-4" onclick={goBack}>
 		<ArrowLeft class="h-4 w-4 mr-2" />
@@ -157,8 +157,11 @@
 	</Button>
 	<div class="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
 		<div class="flex items-center gap-4">
+			<div class="p-2 bg-primary/10 rounded-lg">
+				<Package class="h-6 w-6 text-primary" />
+			</div>
 			<div>
-				<h1 class="text-2xl font-bold">Orden #{order.order_number}</h1>
+				<h1 class="text-2xl font-bold text-foreground">Orden #{order.order_number}</h1>
 				<p class="text-muted-foreground">ID: {order.order_id.substring(0, 8)}...</p>
 			</div>
 		</div>

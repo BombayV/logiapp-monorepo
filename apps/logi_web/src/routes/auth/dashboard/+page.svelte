@@ -9,6 +9,7 @@
 	import { columns, type User } from '@/components/users/columns';
 	import { toast } from 'svelte-sonner';
 	import type { UserData } from '../../../app';
+	import { LayoutDashboard, Users, Crown } from '@lucide/svelte';
 
 	let { data, form }: { data: { user: UserData; users: User[] }; form: ActionData } = $props();
 
@@ -34,19 +35,27 @@
 	/>
 </svelte:head>
 
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
-	<div class="bg-white rounded-lg shadow-md p-6">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+	<div class="bg-card rounded-lg shadow-md p-6 border border-border">
 		<div class="flex justify-between items-center mb-6">
-			<h1 class="text-3xl font-bold text-gray-800">Dashboard</h1>
+			<div class="flex items-center gap-3">
+				<div class="p-2 bg-primary/10 rounded-lg">
+					<LayoutDashboard class="h-6 w-6 text-primary" />
+				</div>
+				<h1 class="text-3xl font-bold text-foreground">Dashboard</h1>
+			</div>
 		</div>
 
-		<div class="bg-indigo-50 p-4 rounded-lg">
-			<h2 class="text-xl font-semibold text-gray-700">
-				Bienvenido, {data.user?.profile?.first_name}
-				{data.user?.profile?.last_name}!
-			</h2>
-			<p class="text-gray-600">
-				Su rol es: <span class="font-mono bg-gray-200 text-gray-800 px-2 py-1 rounded-md"
+		<div class="bg-primary/10 p-4 rounded-lg border border-primary/20">
+			<div class="flex items-center gap-3 mb-2">
+				<Crown class="h-5 w-5 text-primary" />
+				<h2 class="text-xl font-semibold text-foreground">
+					Bienvenido, {data.user?.profile?.first_name}
+					{data.user?.profile?.last_name}!
+				</h2>
+			</div>
+			<p class="text-muted-foreground">
+				Su rol es: <span class="font-mono bg-secondary/30 text-foreground px-2 py-1 rounded-md"
 					>{data.user?.role}</span
 				>
 			</p>
@@ -55,7 +64,12 @@
 		{#if data.user?.role === 'admin'}
 			<div class="mt-6 flex flex-col">
 				<div class="flex items-center justify-between">
-					<h3 class="text-lg font-semibold text-gray-700">Usuarios</h3>
+					<div class="flex items-center gap-3">
+						<div class="p-2 bg-secondary/20 rounded-lg">
+							<Users class="h-5 w-5 text-secondary-foreground" />
+						</div>
+						<h3 class="text-lg font-semibold text-foreground">Usuarios</h3>
+					</div>
 					<Dialog.Root>
 						<Dialog.Trigger class={buttonVariants({ variant: 'outline' })}
 							>Crear usuario</Dialog.Trigger
