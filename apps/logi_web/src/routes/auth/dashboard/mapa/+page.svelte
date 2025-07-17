@@ -1,15 +1,21 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
+	import { User } from '@lucide/svelte';
+	import * as Card from '@/components/ui/card';
 	import type { PageData } from './$types';
+	import type { Map, LayerGroup, LeafletMouseEvent } from 'leaflet';
 
-	export let data: PageData;
+	let { data }: { data: PageData } = $props();
 
 	// Leaflet will be loaded dynamically
-	let L: any;
-	let map: any;
+	let L: typeof import('leaflet');
+	let map: Map;
 	let mapContainer: HTMLDivElement;
-	let markersLayer: any;
+	let markersLayer: LayerGroup;
+
+	// Create a hidden div to render the Lucide icon and get its HTML
+	let iconContainer: HTMLDivElement;
 
 	// Driver interface
 	interface Driver {
@@ -34,7 +40,7 @@
 
 				// Initialize the map
 				map = L.map(mapContainer, {
-					center: [36.1699, -115.1398],
+					center: [-0.1807, -78.4678], // Quito, Ecuador coordinates
 					zoom: 10,
 					zoomControl: true
 				});
@@ -60,6 +66,12 @@
 		};
 	});
 
+	// Helper function to get Lucide User icon HTML from the actual component
+	function getUserIconHTML(): string {
+		if (!iconContainer) return '';
+		return iconContainer.innerHTML;
+	}
+
 	function addDriverMarkers() {
 		if (!L || !markersLayer) return;
 
@@ -69,14 +81,12 @@
 		// Add markers for each driver
 		data.drivers.forEach((driver: Driver) => {
 			if (driver.latitude && driver.longitude) {
-				// Create custom icon for driver
+				// Create custom icon for driver with Lucide User icon
 				const driverIcon = L.divIcon({
 					html: `
-						<div class="driver-marker">
+						<div class="driver-marker" data-driver-id="${driver.user_id}">
 							<div class="driver-icon">
-								<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-									<path d="M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2ZM21 9V7L15 5.5V4C15 3.45 14.55 3 14 3H10C9.45 3 9 3.45 9 4V5.5L3 7V9H21ZM12 8C12.55 8 13 8.45 13 9V10H11V9C11 8.45 11.45 8 12 8Z" fill="currentColor"/>
-								</svg>
+								${getUserIconHTML()}
 							</div>
 						</div>
 					`,
@@ -91,20 +101,55 @@
 					icon: driverIcon
 				});
 
-				// Create popup content
+				// Add popup with driver details
 				const popupContent = `
-					<div class="driver-popup">
-						<h3 class="font-semibold text-lg">${driver.first_name} ${driver.last_name}</h3>
-						<div class="space-y-2 mt-2">
-							<p><strong>Email:</strong> ${driver.email}</p>
-							<p><strong>Teléfono:</strong> ${driver.phone_number}</p>
-							<p><strong>Última conexión:</strong> ${formatDate(driver.last_connection)}</p>
-							<p><strong>Ubicación actualizada:</strong> ${formatDate(driver.location_updated_at)}</p>
+					<div class="p-4 min-w-[280px]">
+						<div class="flex items-center space-x-3 mb-4">
+							<div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+								<svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+								</svg>
+							</div>
+							<div class="flex flex-col">
+								<h4 class="font-semibold text-lg">${driver.first_name} ${driver.last_name}</h4>
+								<p class="text-sm text-gray-600 !m-0">${driver.email}</p>
+							</div>
+						</div>
+						<div class="space-y-2 text-sm">
+							<div class="flex items-center space-x-2">
+								<span class="text-gray-500">Teléfono:</span>
+								<span>${driver.phone_number}</span>
+							</div>
+							<div class="flex items-center space-x-2">
+								<span class="text-gray-500">Última conexión:</span>
+								<span>${formatDate(driver.last_connection)}</span>
+							</div>
+							${
+								driver.latitude && driver.longitude
+									? `
+								<div class="flex items-center space-x-2">
+									<span class="text-gray-500">Coordenadas:</span>
+									<span class="font-mono text-xs">
+										${driver.latitude.toFixed(6)}, ${driver.longitude.toFixed(6)}
+									</span>
+								</div>
+							`
+									: `
+								<div class="flex items-center space-x-2">
+									<span class="text-gray-500">Ubicación:</span>
+									<span class="text-orange-600">No disponible</span>
+								</div>
+							`
+							}
 						</div>
 					</div>
 				`;
 
-				marker.bindPopup(popupContent);
+				marker.bindPopup(popupContent, {
+					maxWidth: 320,
+					className: 'custom-popup'
+				});
+
 				markersLayer.addLayer(marker);
 			}
 		});
@@ -113,7 +158,7 @@
 		if (data.drivers.length > 0) {
 			const hasValidCoords = data.drivers.some((d: Driver) => d.latitude && d.longitude);
 			if (hasValidCoords) {
-				const group = new L.featureGroup(Object.values(markersLayer._layers));
+				const group = L.featureGroup(Object.values(markersLayer.getLayers()));
 				map.fitBounds(group.getBounds().pad(0.1));
 			}
 		}
@@ -130,10 +175,12 @@
 		});
 	}
 
-	// Reactive statement to update markers when data changes
-	$: if (browser && markersLayer && data.drivers) {
-		addDriverMarkers();
-	}
+	// Effect to update markers when data changes
+	$effect(() => {
+		if (browser && markersLayer && data.drivers) {
+			addDriverMarkers();
+		}
+	});
 </script>
 
 <svelte:head>
@@ -144,6 +191,11 @@
 </svelte:head>
 
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
+	<!-- Hidden container to render the Lucide User icon -->
+	<div bind:this={iconContainer} class="hidden">
+		<User size={24} />
+	</div>
+
 	<div class="bg-white rounded-lg shadow-md p-6">
 		<div class="mb-6">
 			<h1 class="text-3xl font-bold text-gray-800 mb-2">Mapa de Empleados</h1>
@@ -153,7 +205,7 @@
 		</div>
 
 		<!-- Map Container -->
-		<div class="bg-white rounded-lg shadow-lg overflow-hidden">
+		<div class="bg-white rounded-lg shadow-lg overflow-hidden relative">
 			<div bind:this={mapContainer} class="h-[600px] w-full" id="map"></div>
 		</div>
 
@@ -166,22 +218,44 @@
 			{:else}
 				<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
 					{#each data.drivers as driver}
-						<div class="border rounded-lg p-4 hover:shadow-md transition-shadow">
-							<h3 class="font-semibold text-lg">{driver.first_name} {driver.last_name}</h3>
-							<div class="space-y-1 mt-2 text-sm text-gray-600">
-								<p><strong>Email:</strong> {driver.email}</p>
-								<p><strong>Teléfono:</strong> {driver.phone_number}</p>
-								<p><strong>Última conexión:</strong> {formatDate(driver.last_connection)}</p>
-								{#if driver.latitude && driver.longitude}
-									<p>
-										<strong>Ubicación:</strong>
-										{driver.latitude.toFixed(6)}, {driver.longitude.toFixed(6)}
-									</p>
-								{:else}
-									<p class="text-orange-600"><strong>Ubicación:</strong> No disponible</p>
-								{/if}
-							</div>
-						</div>
+						<Card.Root class="hover:shadow-md transition-shadow cursor-pointer">
+							<Card.Header class="">
+								<div class="flex items-center space-x-3">
+									<div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+										<User class="w-5 h-5 text-blue-600" />
+									</div>
+									<div>
+										<Card.Title class="text-lg">{driver.first_name} {driver.last_name}</Card.Title>
+										<Card.Description class="text-sm">{driver.email}</Card.Description>
+									</div>
+								</div>
+							</Card.Header>
+							<Card.Content class="pt-0">
+								<div class="space-y-2 text-sm">
+									<div class="flex items-center space-x-2">
+										<span class="text-gray-500">Teléfono:</span>
+										<span>{driver.phone_number}</span>
+									</div>
+									<div class="flex items-center space-x-2">
+										<span class="text-gray-500">Última conexión:</span>
+										<span>{formatDate(driver.last_connection)}</span>
+									</div>
+									{#if driver.latitude && driver.longitude}
+										<div class="flex items-center space-x-2">
+											<span class="text-gray-500">Coordenadas:</span>
+											<span class="font-mono text-xs">
+												{driver.latitude.toFixed(6)}, {driver.longitude.toFixed(6)}
+											</span>
+										</div>
+									{:else}
+										<div class="flex items-center space-x-2">
+											<span class="text-gray-500">Ubicación:</span>
+											<span class="text-orange-600">No disponible</span>
+										</div>
+									{/if}
+								</div>
+							</Card.Content>
+						</Card.Root>
 					{/each}
 				</div>
 			{/if}
@@ -206,6 +280,7 @@
 		justify-content: center;
 		color: #3b82f6;
 		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+		cursor: pointer;
 	}
 
 	:global(.driver-marker:hover) {
@@ -215,29 +290,54 @@
 		transition: all 0.2s ease;
 	}
 
-	:global(.driver-popup) {
-		min-width: 250px;
-	}
-
-	:global(.driver-popup h3) {
-		margin: 0 0 8px 0;
-		color: #1f2937;
-	}
-
-	:global(.driver-popup p) {
-		margin: 4px 0;
-		font-size: 14px;
-		color: #4b5563;
-	}
-
-	:global(.leaflet-popup-content-wrapper) {
+	/* Custom popup styling */
+	:global(.custom-popup .leaflet-popup-content-wrapper) {
 		border-radius: 8px;
 		box-shadow:
 			0 4px 6px -1px rgba(0, 0, 0, 0.1),
 			0 2px 4px -1px rgba(0, 0, 0, 0.06);
+		border: 1px solid #e5e7eb;
 	}
 
-	:global(.leaflet-popup-tip) {
+	:global(.custom-popup .leaflet-popup-content) {
+		margin: 0;
+		line-height: 1.4;
+		font-family: inherit;
+	}
+
+	:global(.custom-popup .leaflet-popup-tip) {
 		background: white;
+		border: 1px solid #e5e7eb;
+		border-top: none;
+		border-right: none;
+	}
+
+	:global(.custom-popup .leaflet-popup-close-button) {
+		color: #9ca3af;
+		font-size: 16px;
+		padding: 8px;
+		font-weight: bold;
+		text-decoration: none;
+		border-radius: 4px;
+		transition: all 0.2s ease;
+		width: 24px;
+		height: 24px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: #f3f4f6;
+		border: 1px solid #e5e7eb;
+		margin-right: 8px;
+		margin-top: 8px;
+	}
+
+	:global(.custom-popup .leaflet-popup-close-button:hover) {
+		color: #374151;
+		background: #e5e7eb;
+		transform: scale(1.1);
+	}
+
+	:global(.custom-popup .leaflet-popup-close-button:active) {
+		transform: scale(0.95);
 	}
 </style>
