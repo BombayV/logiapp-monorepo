@@ -252,7 +252,6 @@ export const updateOrder = async (
 	updateData: { assigned_to?: string | null; address?: string; status?: string }
 ) => {
 	try {
-		console.log('Updating order with ID:', orderId, 'and data:', updateData);
 		const response = await fetchAuth(
 			`/v1/orders/${orderId}`,
 			{

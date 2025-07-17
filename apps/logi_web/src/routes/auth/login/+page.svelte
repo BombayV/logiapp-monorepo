@@ -11,6 +11,7 @@
 	import { Label } from '$lib/components/ui/label';
 	import { Button } from '$lib/components/ui/button';
 	import type { ActionData, PageData } from './$types';
+	import { LogIn } from '@lucide/svelte';
 
 	export let form: ActionData;
 	export let data: PageData;
@@ -32,7 +33,12 @@
 	<Card class="w-full max-w-sm">
 		<form action="?/login" method="post">
 			<CardHeader>
-				<CardTitle class="text-2xl">Iniciar sesión</CardTitle>
+				<div class="flex items-center gap-3 mb-2">
+					<div class="p-2 bg-primary/10 rounded-lg">
+						<LogIn class="h-6 w-6 text-primary" />
+					</div>
+					<CardTitle class="text-2xl">Iniciar sesión</CardTitle>
+				</div>
 				<CardDescription>Ingresa su email y contraseña para acceder a su cuenta.</CardDescription>
 			</CardHeader>
 			<CardContent class="grid gap-4 mt-2">
@@ -60,9 +66,11 @@
 				</div>
 				{#if form?.error || hasError(data)}
 					{#if form?.error === 'Invalid credentials.'}
-						<p class="text-red-500 text-sm">Email o contraseña incorrectos.</p>
+						<p class="text-destructive text-sm">Email o contraseña incorrectos.</p>
 					{:else}
-						<p class="text-red-500 text-sm">{form?.error || (hasError(data) ? data.error : '')}</p>
+						<p class="text-destructive text-sm">
+							{form?.error || (hasError(data) ? data.error : '')}
+						</p>
 					{/if}
 				{/if}
 			</CardContent>
@@ -71,7 +79,7 @@
 				<p class="mt-4 text-xs text-center text-muted-foreground">
 					Toda la información es confidencial y no será compartida.
 				</p>
-				<a href="/" class="mt-2 text-sm text-blue-500 hover:underline"> Volver al inicio </a>
+				<a href="/" class="mt-2 text-sm text-primary hover:underline"> Volver al inicio </a>
 			</CardFooter>
 		</form>
 	</Card>

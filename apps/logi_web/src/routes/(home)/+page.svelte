@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button';
-	import { ArrowRight, Truck, Map } from '@lucide/svelte';
+	import { ArrowRight, Truck, Map, Download } from '@lucide/svelte';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -97,6 +97,38 @@
 							Manten un control total de todos los empleados disponibles y sus ubicaciones en tiempo
 							real.
 						</p>
+					</div>
+				</div>
+			</div>
+		</section>
+		<section class="w-full py-12 md:py-24 lg:py-32 bg-white">
+			<div class="px-4 md:px-6">
+				<div class="flex flex-col items-center justify-center space-y-4 text-center">
+					<div class="space-y-2">
+						<div class="inline-block rounded-lg bg-neutral-200 px-3 py-1 text-sm">
+							Disponible en Móvil
+						</div>
+						<h2 class="text-3xl font-bold tracking-tighter sm:text-4xl">Descarga la App LogiApp</h2>
+						<p
+							class="max-w-[900px] text-gray-500 md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed"
+						>
+							Lleva tu logística contigo. Gestiona pedidos, monitorea envíos y mantén el control
+							total desde tu dispositivo móvil.
+						</p>
+					</div>
+					<div class="flex flex-col sm:flex-row gap-4 mt-8">
+						<a href="/" class="inline-block">
+							<Button size="lg" class="rounded-full px-8 flex items-center gap-2">
+								<Download class="h-5 w-5" />
+								Descargar para Android
+							</Button>
+						</a>
+						<a href="/" class="inline-block">
+							<Button size="lg" variant="outline" class="rounded-full px-8 flex items-center gap-2">
+								<Download class="h-5 w-5" />
+								Descargar para iOS
+							</Button>
+						</a>
 					</div>
 				</div>
 			</div>
