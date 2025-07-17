@@ -67,6 +67,7 @@ func SetupRouter(db *database.DB, redisCache *cache.Cache, userHandler *handlers
 		v1.GET("/orders", middleware.AuthMiddleware([]string{"sales", "admin"}), orderHandler.GetAllOrders)
 		v1.GET("/orders/:id", middleware.AuthMiddleware([]string{"sales", "driver"}), orderHandler.GetOrderByID)
 		v1.PUT("/orders/:id", middleware.AuthMiddleware([]string{"sales"}), orderHandler.UpdateOrder)
+		v1.PATCH("/orders/:id/status", middleware.AuthMiddleware([]string{"sales", "driver"}), orderHandler.UpdateOrderStatus)
 		v1.DELETE("/orders/:id", middleware.AuthMiddleware([]string{"sales"}), orderHandler.DeleteOrder)
 
 		// Order items routes (must be defined after specific order routes)

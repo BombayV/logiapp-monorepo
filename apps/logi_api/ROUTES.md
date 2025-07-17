@@ -432,6 +432,41 @@ Authorization: Bearer <token>
 }
 ```
 
+### PATCH `/v1/orders/:id/status`
+**Description**: Update only the status of an order  
+**Authentication**: Required (sales, driver)  
+**Path Parameters**:
+- `id`: Order UUID
+
+**Request Body**:
+```json
+{
+  "status": "completed"
+}
+```
+
+**Valid Status Values**:
+- `pending`
+- `in_progress`
+- `completed`
+- `cancelled`
+
+**Response**:
+```json
+{
+  "order_id": "order-uuid",
+  "order_number": "123456",
+  "created_by": "user-uuid",
+  "created_by_username": "sales@example.com",
+  "assigned_to": "driver-uuid",
+  "assigned_to_username": "driver@example.com",
+  "delivery_address": "123 Main St, City, State",
+  "status": "completed",
+  "created_at": "2023-12-01T14:30:22Z",
+  "updated_at": "2023-12-01T14:40:22Z"
+}
+```
+
 ### DELETE `/v1/orders/:id`
 **Description**: Delete order  
 **Authentication**: Required (sales)  

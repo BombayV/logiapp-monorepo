@@ -34,6 +34,10 @@ type UpdateOrderRequest struct {
 	Status     *string `json:"status,omitempty"`
 }
 
+type UpdateOrderStatusRequest struct {
+	Status string `json:"status" binding:"required"`
+}
+
 type AddOrderItemRequest struct {
 	ProductName string `json:"product_name" binding:"required"`
 	Quantity    int    `json:"quantity" binding:"required,min=1"`
@@ -241,6 +245,43 @@ func (h *OrderHandler) UpdateOrder(c *gin.Context) {
 	c.JSON(http.StatusOK, order)
 }
 
+// UpdateOrderStatus updates only the status of an existing order
+func (h *OrderHandler) UpdateOrderStatus(c *gin.Context) {
+	orderID := c.Param("id")
+	if orderID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Order ID is required"})
+		return
+	}
+
+	var req UpdateOrderStatusRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Validate status
+	validStatuses := map[string]bool{
+		"pending":     true,
+		"in_progress": true,
+		"completed":   true,
+		"cancelled":   true,
+	}
+
+	if !validStatuses[req.Status] {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid status. Allowed values: pending, in_progress, completed, cancelled"})
+		return
+	}
+
+	// Update order with only status change
+	order, err := h.service.UpdateOrder(c.Request.Context(), orderID, "", false, "", req.Status)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, order)
+}
+
 // DeleteOrder deletes an order
 func (h *OrderHandler) DeleteOrder(c *gin.Context) {
 	orderID := c.Param("id")
@@ -410,7 +451,6 @@ func (h *OrderHandler) GetOrdersByUserID(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "User ID is required"})
 		return
 	}
-
 
 	orders, err := h.service.FindByAssignedTo(c.Request.Context(), userID)
 	if err != nil {
