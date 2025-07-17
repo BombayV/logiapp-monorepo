@@ -4,6 +4,7 @@ import 'package:logi_app/main.dart';
 import 'package:logi_app/config/constants.dart';
 import 'package:logi_app/auth/auth.dart';
 import 'package:logi_app/secureStorage/flutter_secure_storage.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class OrderDetailsPage extends StatefulWidget {
   final String orderId;
@@ -21,6 +22,7 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
   final SecureStorageService secureStorage = SecureStorageService();
   late final AuthService authService;
   Map<String, dynamic>? orderData;
+  Map<String, dynamic>? orderItems;
   bool isLoading = true;
 
   @override
@@ -37,9 +39,11 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
       });
 
       final data = await authService.getOrderById(widget.orderId);
+      final items = await authService.getOrderItems(widget.orderId);
 
       setState(() {
         orderData = data;
+        orderItems = items;
         isLoading = false;
       });
     } catch (e) {
@@ -124,6 +128,36 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
         return 'Cancelado';
       default:
         return status;
+    }
+  }
+
+  Future<void> _openMaps(String address) async {
+    final encodedAddress = Uri.encodeComponent(address);
+
+    try {
+      // Usar la URL apropiada según la plataforma
+      final mapUrl = Theme.of(context).platform == TargetPlatform.iOS
+          ? 'https://maps.apple.com/?q=$encodedAddress'
+          : 'https://www.google.com/maps/search/?api=1&query=$encodedAddress';
+
+      final uri = Uri.parse(mapUrl);
+
+      // Verificar si se puede abrir la URL antes de intentarlo
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        throw Exception('No se puede abrir la aplicación de mapas');
+      }
+    } catch (e) {
+      print('Error al abrir mapas: $e');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al abrir mapas: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -294,6 +328,212 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
                                     ),
                                   ],
                                 ),
+
+                                const SizedBox(height: 16),
+
+                                // Botón para abrir en mapas
+                                ElevatedButton.icon(
+                                  onPressed: () {
+                                    _openMaps(orderData!['delivery_address']);
+                                  },
+                                  icon: const Icon(Icons.directions),
+                                  label: const Text('Ver en Mapas'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.green,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 12,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 32),
+
+                        // Título de items de la orden
+                        const Text(
+                          'Items de la Orden',
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+
+                        const SizedBox(height: 16),
+
+                        // Tarjeta con tabla de productos
+                        Card(
+                          elevation: 4,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(20),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.shopping_cart,
+                                      size: 24,
+                                      color: Colors.blue,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    const Text(
+                                      'Productos a Recolectar',
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 16),
+
+                                // Tabla de productos
+                                Container(
+                                  decoration: BoxDecoration(
+                                    border: Border.all(color: Colors.grey.shade300),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      // Encabezado de la tabla
+                                      Container(
+                                        padding: const EdgeInsets.all(12),
+                                        decoration: BoxDecoration(
+                                          color: Colors.grey.shade100,
+                                          borderRadius: const BorderRadius.only(
+                                            topLeft: Radius.circular(8),
+                                            topRight: Radius.circular(8),
+                                          ),
+                                        ),
+                                        child: const Row(
+                                          children: [
+                                            Expanded(
+                                              flex: 3,
+                                              child: Text(
+                                                'Producto',
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 16,
+                                                ),
+                                              ),
+                                            ),
+                                            Expanded(
+                                              flex: 1,
+                                              child: Text(
+                                                'Cantidad',
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 16,
+                                                ),
+                                                textAlign: TextAlign.center,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+
+                                      // Filas de productos
+                                      if (orderItems != null && orderItems!['items'] != null)
+                                        ...orderItems!['items'].map<Widget>((item) {
+                                          return Container(
+                                            padding: const EdgeInsets.all(12),
+                                            decoration: BoxDecoration(
+                                              border: Border(
+                                                bottom: BorderSide(
+                                                  color: Colors.grey.shade200,
+                                                  width: 1,
+                                                ),
+                                              ),
+                                            ),
+                                            child: Row(
+                                              children: [
+                                                Expanded(
+                                                  flex: 3,
+                                                  child: Text(
+                                                    item['product_name'] ?? '',
+                                                    style: const TextStyle(fontSize: 15),
+                                                  ),
+                                                ),
+                                                Expanded(
+                                                  flex: 1,
+                                                  child: Text(
+                                                    '${item['quantity']}',
+                                                    style: const TextStyle(
+                                                      fontSize: 15,
+                                                      fontWeight: FontWeight.w600,
+                                                    ),
+                                                    textAlign: TextAlign.center,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                        }).toList(),
+
+                                      // Mensaje si no hay productos
+                                      if (orderItems == null || orderItems!['items'] == null || orderItems!['items'].isEmpty)
+                                        const Padding(
+                                          padding: EdgeInsets.all(20),
+                                          child: Text(
+                                            'No hay productos para recolectar',
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              color: Colors.grey,
+                                              fontStyle: FontStyle.italic,
+                                            ),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+
+                                // Total de productos
+                                if (orderItems != null && orderItems!['total'] != null)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 12),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        const Text(
+                                          'Total de productos:',
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 6,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.blue.shade100,
+                                            borderRadius: BorderRadius.circular(16),
+                                          ),
+                                          child: Text(
+                                            '${orderItems!['total']}',
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.blue.shade700,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
                               ],
                             ),
                           ),

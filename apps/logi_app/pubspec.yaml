@@ -38,6 +38,9 @@ dependencies:
   geolocator: ^10.1.0
   permission_handler: ^11.0.1
 
+  # Para abrir aplicaciones externas como mapas
+  url_launcher: ^6.2.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

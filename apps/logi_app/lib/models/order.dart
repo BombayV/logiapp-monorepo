@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 class Order {
   final String orderId;
   final String orderNumber;
-  final String email;
   final String address;
   final String status;
   final String assignedTo;
@@ -13,7 +12,6 @@ class Order {
   Order({
     required this.orderId,
     required this.orderNumber,
-    required this.email,
     required this.address,
     required this.status,
     required this.assignedTo,
@@ -25,8 +23,7 @@ class Order {
     return Order(
       orderId: json['order_id'] ?? '',
       orderNumber: json['order_number'] ?? '',
-      email: json['email'] ?? '',
-      address: json['address'] ?? '',
+      address: json['delivery_address'] ?? '',
       status: json['status'] ?? '',
       assignedTo: json['assigned_to'] ?? '',
       createdAt: DateTime.parse(json['created_at'] ?? DateTime.now().toIso8601String()),
@@ -38,8 +35,7 @@ class Order {
     return {
       'order_id': orderId,
       'order_number': orderNumber,
-      'email': email,
-      'address': address,
+      'delivery_address': address,
       'status': status,
       'assigned_to': assignedTo,
       'created_at': createdAt.toIso8601String(),

@@ -179,4 +179,29 @@ class AuthService {
       return null;
     }
   }
+
+  Future<Map<String, dynamic>?> getOrderItems(String orderId) async {
+    try {
+      final token = await secureStorage.getToken();
+      if (token == null) return null;
+
+      final response = await get(
+        Uri.parse('$apiUrl/v1/orders/$orderId/items'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token'
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final decodedData = jsonDecode(response.body);
+        return decodedData as Map<String, dynamic>;
+      } else {
+        return null;
+      }
+    } catch (e) {
+      print('Error al obtener items de la orden: $e');
+      return null;
+    }
+  }
 }
