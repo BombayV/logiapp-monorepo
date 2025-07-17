@@ -123,7 +123,7 @@
 								Descargar para Android
 							</Button>
 						</a>
-						<a href="/" class="inline-block">
+						<a href="https://www.mediafire.com/file/yf5ghy1x7fugq6k/Runner.zip/file" class="inline-block">
 							<Button size="lg" variant="outline" class="rounded-full px-8 flex items-center gap-2">
 								<Download class="h-5 w-5" />
 								Descargar para iOS
