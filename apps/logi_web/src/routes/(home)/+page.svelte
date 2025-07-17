@@ -117,7 +117,7 @@
 						</p>
 					</div>
 					<div class="flex flex-col sm:flex-row gap-4 mt-8">
-						<a href="/" class="inline-block">
+						<a href="https://www.mediafire.com/file/mli7h5kjqj92joy/LogiApp1.0.0.apk/file" class="inline-block">
 							<Button size="lg" class="rounded-full px-8 flex items-center gap-2">
 								<Download class="h-5 w-5" />
 								Descargar para Android
