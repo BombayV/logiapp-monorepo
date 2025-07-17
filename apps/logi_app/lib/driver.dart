@@ -69,8 +69,23 @@ class _DriverPageState extends State<DriverPage> with WidgetsBindingObserver {
 
       final ordersData = await authService.getOrdersByDriver();
 
-      if (ordersData != null && ordersData['orders'] is List) {
-        final ordersList = ordersData['orders'] as List;
+      print('Orders data: $ordersData');
+
+      if (ordersData != null) {
+        List<dynamic> ordersList;
+
+        // Verificar si ordersData es directamente una lista
+        if (ordersData is List) {
+          ordersList = ordersData;
+        }
+        // Verificar si ordersData contiene una propiedad 'orders' que es una lista
+        else if (ordersData is Map<String, dynamic> && ordersData['orders'] is List) {
+          ordersList = ordersData['orders'] as List;
+        } else {
+          // Si no hay estructura esperada, inicializar lista vacía
+          ordersList = [];
+        }
+
         setState(() {
           orders = ordersList
               .map((orderJson) => Order.fromJson(orderJson as Map<String, dynamic>))
@@ -267,125 +282,78 @@ class _DriverPageState extends State<DriverPage> with WidgetsBindingObserver {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Orden #${order.orderNumber}',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: order.statusColor,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    order.statusDisplayName,
+      child: InkWell(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => OrderDetailsPage(orderId: order.orderId),
+            ),
+          );
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Orden #${order.orderNumber}',
                     style: const TextStyle(
-                      color: Colors.white,
+                      fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      fontSize: 12,
                     ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                const Icon(Icons.email, size: 16, color: Colors.grey),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    order.email,
-                    style: const TextStyle(fontSize: 14),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Icon(Icons.location_on, size: 16, color: Colors.grey),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    order.address,
-                    style: const TextStyle(fontSize: 14),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                const Icon(Icons.access_time, size: 16, color: Colors.grey),
-                const SizedBox(width: 8),
-                Text(
-                  'Creado: ${_formatDate(order.createdAt)}',
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => OrderDetailsPage(order: order),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.visibility),
-                    label: const Text('Ver Detalles'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: order.statusColor,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      order.statusDisplayName,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: order.status == 'delivered' || order.status == 'cancelled'
-                        ? null
-                        : () {
-                            _updateOrderStatus(order);
-                          },
-                    icon: const Icon(Icons.update),
-                    label: const Text('Actualizar'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.location_on, size: 16, color: Colors.grey),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      order.address,
+                      style: const TextStyle(fontSize: 14),
                     ),
                   ),
-                ),
-              ],
-            ),
-          ],
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  const Icon(Icons.access_time, size: 16, color: Colors.grey),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Creado: ${_formatDate(order.createdAt)}',
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -393,88 +361,5 @@ class _DriverPageState extends State<DriverPage> with WidgetsBindingObserver {
 
   String _formatDate(DateTime date) {
     return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
-  }
-
-  Future<void> _updateOrderStatus(Order order) async {
-    // Mostrar dialog para actualizar estado
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Actualizar Orden #${order.orderNumber}'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              title: const Text('En Progreso'),
-              leading: Radio(
-                value: 'in_progress',
-                groupValue: order.status,
-                onChanged: (value) {
-                  Navigator.of(context).pop();
-                  _performStatusUpdate(order, 'in_progress');
-                },
-              ),
-            ),
-            ListTile(
-              title: const Text('Entregado'),
-              leading: Radio(
-                value: 'delivered',
-                groupValue: order.status,
-                onChanged: (value) {
-                  Navigator.of(context).pop();
-                  _performStatusUpdate(order, 'delivered');
-                },
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancelar'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _performStatusUpdate(Order order, String newStatus) async {
-    try {
-      // Aquí deberías implementar la llamada al API para actualizar el estado
-      // final success = await authService.updateOrderStatus(order.orderId, newStatus);
-
-      // Por ahora, simularemos que la actualización fue exitosa
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Estado actualizado a: ${_getStatusDisplayName(newStatus)}'),
-          backgroundColor: Colors.green,
-        ),
-      );
-
-      // Recargar órdenes después de actualizar
-      getOrdersByDriver();
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error al actualizar estado: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-
-  String _getStatusDisplayName(String status) {
-    switch (status.toLowerCase()) {
-      case 'pending':
-        return 'Pendiente';
-      case 'in_progress':
-        return 'En Progreso';
-      case 'delivered':
-        return 'Entregado';
-      case 'cancelled':
-        return 'Cancelado';
-      default:
-        return status;
-    }
   }
 }

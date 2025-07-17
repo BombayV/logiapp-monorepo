@@ -4,14 +4,13 @@ import 'package:logi_app/main.dart';
 import 'package:logi_app/config/constants.dart';
 import 'package:logi_app/auth/auth.dart';
 import 'package:logi_app/secureStorage/flutter_secure_storage.dart';
-import 'package:logi_app/models/order.dart';
 
 class OrderDetailsPage extends StatefulWidget {
-  final Order order;
+  final String orderId;
 
   const OrderDetailsPage({
     super.key,
-    required this.order,
+    required this.orderId,
   });
 
   @override
@@ -21,14 +20,42 @@ class OrderDetailsPage extends StatefulWidget {
 class _OrderDetailsPageState extends State<OrderDetailsPage> {
   final SecureStorageService secureStorage = SecureStorageService();
   late final AuthService authService;
-  late String currentStatus;
-  bool _isUpdatingStatus = false;
+  Map<String, dynamic>? orderData;
+  bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
     authService = AuthService(apiUrl: apiBaseUrl);
-    currentStatus = widget.order.status;
+    _loadOrderDetails();
+  }
+
+  Future<void> _loadOrderDetails() async {
+    try {
+      setState(() {
+        isLoading = true;
+      });
+
+      final data = await authService.getOrderById(widget.orderId);
+
+      setState(() {
+        orderData = data;
+        isLoading = false;
+      });
+    } catch (e) {
+      print('Error al cargar detalles de la orden: $e');
+      setState(() {
+        isLoading = false;
+      });
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al cargar detalles: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   Future<String> getUserFullName() async {
@@ -50,109 +77,39 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
     try {
       final success = await authService.logout();
       if (success) {
-        if (mounted) {
+        if (context.mounted) {
           Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(builder: (context) => const MyApp()),
             (route) => false,
           );
         }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Error al cerrar sesión')),
-          );
-        }
       }
     } catch (e) {
-      if (mounted) {
+      if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
+          SnackBar(
+            content: Text('Error al cerrar sesión: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
   }
 
-  Future<void> _updateOrderStatus() async {
-    setState(() {
-      _isUpdatingStatus = true;
-    });
-
-    try {
-      // Aquí deberías implementar la llamada al API para actualizar el estado
-      // final success = await authService.updateOrderStatus(widget.order.orderId, newStatus);
-
-      // Simular delay de red
-      await Future.delayed(const Duration(seconds: 1));
-
-      setState(() {
-        currentStatus = currentStatus == 'Pendiente' ? 'En Proceso' : 'Entregado';
-        _isUpdatingStatus = false;
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Estado actualizado a: ${_getStatusDisplayName(currentStatus)}'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } catch (e) {
-      setState(() {
-        _isUpdatingStatus = false;
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error al actualizar estado: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-
-  Future<void> _sendCurrentLocation() async {
-    try {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Enviando ubicación...'),
-          backgroundColor: Colors.blue,
-        ),
-      );
-
-      // Aquí deberías implementar el envío de ubicación
-      // await LocationService().requestLocationAndSend();
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Ubicación enviada correctamente'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error al enviar ubicación: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-
-  Color _getStatusColor() {
-    switch (currentStatus) {
-      case 'Pendiente':
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'pending':
         return Colors.orange;
-      case 'En Proceso':
+      case 'in_progress':
         return Colors.blue;
-      case 'Entregado':
+      case 'delivered':
         return Colors.green;
+      case 'cancelled':
+        return Colors.red;
       default:
         return Colors.grey;
     }
-  }
-
-  String _formatDate(DateTime date) {
-    return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
   }
 
   String _getStatusDisplayName(String status) {
@@ -174,7 +131,27 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Orden #${widget.order.orderNumber}'),
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: Image.asset(
+                'assets/logo.png',
+                height: 40,
+                width: 40,
+                errorBuilder: (context, error, stackTrace) {
+                  return Icon(Icons.local_shipping, size: 40);
+                },
+              ),
+            ),
+            const SizedBox(width: 10),
+            const Text(
+              'Detalles de Orden',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
         actions: [
           FutureBuilder<String>(
             future: getUserFullName(),
@@ -183,13 +160,8 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
               return PopupMenuButton<String>(
                 icon: const Icon(Icons.more_vert),
                 onSelected: (value) {
-                  switch (value) {
-                    case 'account':
-                      // TODO: Implementar navegación a cuenta
-                      break;
-                    case 'logout':
-                      _handleLogout();
-                      break;
+                  if (value == 'logout') {
+                    _handleLogout();
                   }
                 },
                 itemBuilder: (BuildContext context) => [
@@ -219,186 +191,117 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Información básica de la orden
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : orderData == null
+              ? const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.error_outline, size: 80, color: Colors.red),
+                      SizedBox(height: 16),
+                      Text(
+                        'No se pudieron cargar los detalles',
+                        style: TextStyle(fontSize: 18, color: Colors.red),
+                      ),
+                    ],
+                  ),
+                )
+              : RefreshIndicator(
+                  onRefresh: _loadOrderDetails,
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Información de la Orden',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
+                        // Tarjeta principal con la información de la orden
+                        Card(
+                          elevation: 4,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: widget.order.statusColor,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            widget.order.statusDisplayName,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
+                          child: Padding(
+                            padding: const EdgeInsets.all(20),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Número de orden y estado
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      'Orden #${orderData!['order_number']}',
+                                      style: const TextStyle(
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                        vertical: 8,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: _getStatusColor(orderData!['status']),
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: Text(
+                                        _getStatusDisplayName(orderData!['status']),
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 24),
+
+                                // Dirección de entrega
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Icon(
+                                      Icons.location_on,
+                                      size: 24,
+                                      color: Colors.red,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          const Text(
+                                            'Dirección de Entrega',
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.grey,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            orderData!['delivery_address'],
+                                            style: const TextStyle(
+                                              fontSize: 18,
+                                              height: 1.3,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 16),
-                    _buildInfoRow('ID de Orden', widget.order.orderId),
-                    _buildInfoRow('Número de Orden', widget.order.orderNumber),
-                    _buildInfoRow('Email del Cliente', widget.order.email),
-                    _buildInfoRow('Dirección', widget.order.address),
-                    _buildInfoRow('Fecha de Creación', _formatDate(widget.order.createdAt)),
-                    _buildInfoRow('Última Actualización', _formatDate(widget.order.updatedAt)),
-                  ],
+                  ),
                 ),
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // Botones de acción
-            if (currentStatus != 'delivered' && currentStatus != 'cancelled') ...[
-              const Text(
-                'Actualizar Estado',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 16),
-              _buildStatusUpdateButtons(),
-            ],
-
-            const SizedBox(height: 20),
-
-            // Botón de ubicación
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Acciones',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: _sendCurrentLocation,
-                        icon: const Icon(Icons.my_location),
-                        label: const Text('Enviar Mi Ubicación'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 120,
-            child: Text(
-              '$label:',
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Colors.grey,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(fontSize: 16),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatusUpdateButtons() {
-    return Column(
-      children: [
-        if (currentStatus == 'pending')
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: _isUpdatingStatus ? null : () => _updateOrderStatus(),
-              icon: _isUpdatingStatus
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.play_arrow),
-              label: const Text('Marcar como En Progreso'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-              ),
-            ),
-          ),
-        if (currentStatus == 'in_progress') ...[
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: _isUpdatingStatus ? null : () => _updateOrderStatus(),
-              icon: _isUpdatingStatus
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.check_circle),
-              label: const Text('Marcar como Entregado'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-              ),
-            ),
-          ),
-        ],
-      ],
     );
   }
 }

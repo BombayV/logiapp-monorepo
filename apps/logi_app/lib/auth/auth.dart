@@ -126,7 +126,7 @@ class AuthService {
     }
   }
 
-  Future<Map<String, dynamic>?> getOrdersByDriver() async {
+  Future<dynamic> getOrdersByDriver() async {
     try {
       final token = await secureStorage.getToken();
       if (token == null) return null;
@@ -144,12 +144,38 @@ class AuthService {
       );
 
       if (response.statusCode == 200) {
-        return jsonDecode(response.body);
+        final decodedData = jsonDecode(response.body);
+        return decodedData;
       } else {
         return null;
       }
     } catch (e) {
       print('Error al obtener pedidos del conductor: $e');
+      return null;
+    }
+  }
+
+  Future<Map<String, dynamic>?> getOrderById(String orderId) async {
+    try {
+      final token = await secureStorage.getToken();
+      if (token == null) return null;
+
+      final response = await get(
+        Uri.parse('$apiUrl/v1/orders/$orderId'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token'
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final decodedData = jsonDecode(response.body);
+        return decodedData as Map<String, dynamic>;
+      } else {
+        return null;
+      }
+    } catch (e) {
+      print('Error al obtener detalles de la orden: $e');
       return null;
     }
   }
