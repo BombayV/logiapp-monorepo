@@ -124,10 +124,108 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
         return 'En Progreso';
       case 'delivered':
         return 'Entregado';
+      case 'completed':
+        return 'Completado';
       case 'cancelled':
         return 'Cancelado';
       default:
         return status;
+    }
+  }
+
+  String _getNextStatus(String currentStatus) {
+    switch (currentStatus.toLowerCase()) {
+      case 'pending':
+        return 'in_progress';
+      case 'in_progress':
+        return 'completed';
+      default:
+        return currentStatus;
+    }
+  }
+
+  String _getNextStatusDisplayName(String currentStatus) {
+    switch (currentStatus.toLowerCase()) {
+      case 'pending':
+        return 'En Progreso';
+      case 'in_progress':
+        return 'Completado';
+      default:
+        return currentStatus;
+    }
+  }
+
+  bool _canUpdateStatus(String currentStatus) {
+    return currentStatus.toLowerCase() == 'pending' ||
+           currentStatus.toLowerCase() == 'in_progress';
+  }
+
+  Future<void> _updateOrderStatus(String newStatus) async {
+    try {
+      final result = await authService.updateOrderStatus(widget.orderId, newStatus);
+
+      if (result != null) {
+        setState(() {
+          orderData = result;
+        });
+
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Estado actualizado a ${_getStatusDisplayName(newStatus)}'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } else {
+        throw Exception('No se pudo actualizar el estado');
+      }
+    } catch (e) {
+      print('Error al actualizar estado: $e');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al actualizar estado: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _showUpdateStatusDialog() async {
+    final currentStatus = orderData!['status'];
+    final nextStatus = _getNextStatus(currentStatus);
+    final nextStatusDisplay = _getNextStatusDisplayName(currentStatus);
+
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Confirmar actualización'),
+          content: Text(
+            '¿Estás seguro de que quieres cambiar el estado de esta orden a "$nextStatusDisplay"?',
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Confirmar'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed == true) {
+      await _updateOrderStatus(nextStatus);
     }
   }
 
@@ -350,6 +448,29 @@ class _OrderDetailsPageState extends State<OrderDetailsPage> {
                                     ),
                                   ),
                                 ),
+
+                                const SizedBox(height: 12),
+
+                                // Botón para actualizar estado
+                                if (_canUpdateStatus(orderData!['status']))
+                                  ElevatedButton.icon(
+                                    onPressed: () {
+                                      _showUpdateStatusDialog();
+                                    },
+                                    icon: const Icon(Icons.update),
+                                    label: Text('Cambiar a ${_getNextStatusDisplayName(orderData!['status'])}'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.blue,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                        vertical: 12,
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                    ),
+                                  ),
                               ],
                             ),
                           ),

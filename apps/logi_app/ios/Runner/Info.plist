@@ -54,6 +54,14 @@
 	<key>NSLocationAlwaysUsageDescription</key>
 	<string>LogiApp necesita acceso continuo a tu ubicación para poder rastrear y actualizar tu posición durante las entregas.</string>
 
+	<!-- Permisos para ejecución en segundo plano -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>location</string>
+		<string>background-processing</string>
+		<string>background-fetch</string>
+	</array>
+
 	<!-- Configuración para url_launcher - esquemas de URL que la app puede abrir -->
 	<key>LSApplicationQueriesSchemes</key>
 	<array>

@@ -204,4 +204,32 @@ class AuthService {
       return null;
     }
   }
+
+  Future<Map<String, dynamic>?> updateOrderStatus(String orderId, String status) async {
+    try {
+      final token = await secureStorage.getToken();
+      if (token == null) return null;
+
+      final response = await patch(
+        Uri.parse('$apiUrl/v1/orders/$orderId/status'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token'
+        },
+        body: jsonEncode({
+          'status': status,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final decodedData = jsonDecode(response.body);
+        return decodedData as Map<String, dynamic>;
+      } else {
+        return null;
+      }
+    } catch (e) {
+      print('Error al actualizar estado de la orden: $e');
+      return null;
+    }
+  }
 }
