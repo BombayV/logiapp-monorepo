@@ -1,38 +1,45 @@
-import 'package:http/http.dart';
+import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:logi_app/secureStorage/flutter_secure_storage.dart';
 
 class AuthService {
-  final String apiUrl;
-  final SecureStorageService secureStorage = SecureStorageService();
+  final String _apiUrl;
+  final SecureStorageService _secureStorage = SecureStorageService();
 
-  AuthService({required this.apiUrl});
+  static const String _logPrefix = '[AuthService]';
 
-  Future<Map<String, dynamic>> login(String username, String password) async {
+  AuthService({required String apiUrl}) : _apiUrl = apiUrl;
+
+  // Login del usuario
+  Future<Map<String, dynamic>> login(String email, String password) async {
     try {
-      final response = await post(
-        Uri.parse('$apiUrl/v1/users/login'),
+      final response = await http.post(
+        Uri.parse('$_apiUrl/v1/users/login'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'email': username, 'password': password}),
+        body: jsonEncode({'email': email, 'password': password}),
       );
 
-      final data = jsonDecode(response.body);
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
 
       if (response.statusCode == 200) {
-        await secureStorage.saveToken(data['token']);
-        await me();
+        await _secureStorage.saveToken(data['token'] as String);
+        await _fetchUserProfile();
+
+        debugPrint('$_logPrefix Login exitoso para: $email');
         return {
           'success': true,
           'token': data['token'],
-          'message': 'Login successful',
+          'message': 'Login exitoso',
         };
       } else {
         return {
           'success': false,
-          'message': data['error'] ?? 'Login failed',
+          'message': data['error'] ?? 'Error en el login',
         };
       }
     } catch (e) {
+      debugPrint('$_logPrefix Error en login: $e');
       return {
         'success': false,
         'message': 'Error de conexión: $e',
@@ -40,196 +47,202 @@ class AuthService {
     }
   }
 
-  Future<void> me() async {
+  // Obtener perfil del usuario
+  Future<void> _fetchUserProfile() async {
     try {
-      final token = await secureStorage.getToken();
+      final token = await _secureStorage.getToken();
       if (token == null) throw Exception('No hay token disponible');
 
-      final response = await get(
-        Uri.parse('$apiUrl/v1/users/me'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token'
-        },
+      final response = await http.get(
+        Uri.parse('$_apiUrl/v1/users/me'),
+        headers: _buildHeaders(token),
       );
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if(data['role'] == 'sales') {
+        final userData = jsonDecode(response.body) as Map<String, dynamic>;
+
+        if (userData['role'] == 'sales') {
           throw Exception('Usuario no autorizado');
         }
-        await secureStorage.saveUserData(data);
+
+        await _secureStorage.saveUserData(userData);
+        debugPrint('$_logPrefix Perfil de usuario obtenido exitosamente');
       } else {
         throw Exception('Error al obtener datos del usuario');
       }
     } catch (e) {
-      print('Error en me(): $e');
+      debugPrint('$_logPrefix Error obteniendo perfil: $e');
       rethrow;
     }
   }
 
-  Future <bool> sendLocation(double latitude, double longitude) async {
+  // Enviar ubicación del usuario
+  Future<bool> sendLocation(double latitude, double longitude) async {
     try {
-      final token = await secureStorage.getToken();
+      final token = await _secureStorage.getToken();
       if (token == null) return false;
 
-      final response = await put(
-        Uri.parse('$apiUrl/v1/users/location'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token'
-        },
+      final response = await http.put(
+        Uri.parse('$_apiUrl/v1/users/location'),
+        headers: _buildHeaders(token),
         body: jsonEncode({
           'latitude': latitude,
           'longitude': longitude,
         }),
       );
 
-      return response.statusCode == 200;
+      final success = response.statusCode == 200;
+      if (success) {
+        debugPrint('$_logPrefix Ubicación enviada: $latitude, $longitude');
+      } else {
+        debugPrint('$_logPrefix Error enviando ubicación: ${response.statusCode}');
+      }
+
+      return success;
     } catch (e) {
-      print('Error al enviar ubicación: $e');
+      debugPrint('$_logPrefix Error enviando ubicación: $e');
       return false;
     }
   }
 
+  // Logout del usuario
   Future<bool> logout() async {
     try {
-      final token = await secureStorage.getToken();
-      if (token == null) return false;
+      final token = await _secureStorage.getToken();
 
-      final response = await post(
-        Uri.parse('$apiUrl/v1/users/logout'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token'
-        },
-      );
+      if (token != null) {
+        await http.post(
+          Uri.parse('$_apiUrl/v1/users/logout'),
+          headers: _buildHeaders(token),
+        );
+      }
 
-      // Limpiar datos locales independientemente del resultado del servidor
-      await secureStorage.clearAll();
-
-      return response.statusCode == 200;
+      await _secureStorage.clearAll();
+      debugPrint('$_logPrefix Logout exitoso');
+      return true;
     } catch (e) {
-      print('Error en logout: $e');
-      // Limpiar datos locales aunque haya error
-      await secureStorage.clearAll();
+      debugPrint('$_logPrefix Error en logout: $e');
+      await _secureStorage.clearAll();
       return false;
     }
   }
 
+  // Verificar si el usuario está autenticado
   Future<bool> isAuthenticated() async {
     try {
-      final token = await secureStorage.getToken();
+      final token = await _secureStorage.getToken();
       return token != null && token.isNotEmpty;
     } catch (e) {
+      debugPrint('$_logPrefix Error verificando autenticación: $e');
       return false;
     }
   }
 
+  // Obtener órdenes del conductor
   Future<dynamic> getOrdersByDriver() async {
     try {
-      final token = await secureStorage.getToken();
+      final token = await _secureStorage.getToken();
       if (token == null) return null;
 
-      final userDataString = await secureStorage.getUserData();
-      final userData = jsonDecode(userDataString!);
+      final userDataString = await _secureStorage.getUserData();
+      if (userDataString == null) return null;
+
+      final userData = jsonDecode(userDataString) as Map<String, dynamic>;
       final driverId = userData['user_id'];
 
-      final response = await get(
-        Uri.parse('$apiUrl/v1/users/$driverId/orders'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token'
-        },
+      final response = await http.get(
+        Uri.parse('$_apiUrl/v1/users/$driverId/orders'),
+        headers: _buildHeaders(token),
       );
 
       if (response.statusCode == 200) {
-        final decodedData = jsonDecode(response.body);
-        return decodedData;
-      } else {
-        return null;
+        return jsonDecode(response.body);
       }
+
+      debugPrint('$_logPrefix Error obteniendo órdenes: ${response.statusCode}');
+      return null;
     } catch (e) {
-      print('Error al obtener pedidos del conductor: $e');
+      debugPrint('$_logPrefix Error obteniendo órdenes: $e');
       return null;
     }
   }
 
+  // Obtener orden por ID
   Future<Map<String, dynamic>?> getOrderById(String orderId) async {
     try {
-      final token = await secureStorage.getToken();
+      final token = await _secureStorage.getToken();
       if (token == null) return null;
 
-      final response = await get(
-        Uri.parse('$apiUrl/v1/orders/$orderId'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token'
-        },
+      final response = await http.get(
+        Uri.parse('$_apiUrl/v1/orders/$orderId'),
+        headers: _buildHeaders(token),
       );
 
       if (response.statusCode == 200) {
-        final decodedData = jsonDecode(response.body);
-        return decodedData as Map<String, dynamic>;
-      } else {
-        return null;
+        return jsonDecode(response.body) as Map<String, dynamic>;
       }
+
+      debugPrint('$_logPrefix Error obteniendo orden $orderId: ${response.statusCode}');
+      return null;
     } catch (e) {
-      print('Error al obtener detalles de la orden: $e');
+      debugPrint('$_logPrefix Error obteniendo orden: $e');
       return null;
     }
   }
 
+  // Obtener items de una orden
   Future<Map<String, dynamic>?> getOrderItems(String orderId) async {
     try {
-      final token = await secureStorage.getToken();
+      final token = await _secureStorage.getToken();
       if (token == null) return null;
 
-      final response = await get(
-        Uri.parse('$apiUrl/v1/orders/$orderId/items'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token'
-        },
+      final response = await http.get(
+        Uri.parse('$_apiUrl/v1/orders/$orderId/items'),
+        headers: _buildHeaders(token),
       );
 
       if (response.statusCode == 200) {
-        final decodedData = jsonDecode(response.body);
-        return decodedData as Map<String, dynamic>;
-      } else {
-        return null;
+        return jsonDecode(response.body) as Map<String, dynamic>;
       }
+
+      debugPrint('$_logPrefix Error obteniendo items de orden $orderId: ${response.statusCode}');
+      return null;
     } catch (e) {
-      print('Error al obtener items de la orden: $e');
+      debugPrint('$_logPrefix Error obteniendo items: $e');
       return null;
     }
   }
 
+  // Actualizar estado de una orden
   Future<Map<String, dynamic>?> updateOrderStatus(String orderId, String status) async {
     try {
-      final token = await secureStorage.getToken();
+      final token = await _secureStorage.getToken();
       if (token == null) return null;
 
-      final response = await patch(
-        Uri.parse('$apiUrl/v1/orders/$orderId/status'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token'
-        },
-        body: jsonEncode({
-          'status': status,
-        }),
+      final response = await http.patch(
+        Uri.parse('$_apiUrl/v1/orders/$orderId/status'),
+        headers: _buildHeaders(token),
+        body: jsonEncode({'status': status}),
       );
 
       if (response.statusCode == 200) {
-        final decodedData = jsonDecode(response.body);
-        return decodedData as Map<String, dynamic>;
-      } else {
-        return null;
+        debugPrint('$_logPrefix Estado de orden $orderId actualizado a: $status');
+        return jsonDecode(response.body) as Map<String, dynamic>;
       }
+
+      debugPrint('$_logPrefix Error actualizando estado: ${response.statusCode}');
+      return null;
     } catch (e) {
-      print('Error al actualizar estado de la orden: $e');
+      debugPrint('$_logPrefix Error actualizando estado: $e');
       return null;
     }
+  }
+
+  // Construir headers para las peticiones HTTP
+  Map<String, String> _buildHeaders(String token) {
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
   }
 }

@@ -16,36 +16,40 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'LogiApp',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF74bfc3),
-          primary: const Color(0xFF74bfc3),
-          secondary: const Color(0xFFc0b5a9),
-          surface: const Color(0xFFfdfeff),
+      theme: _buildTheme(),
+      home: const LoginPage(),
+    );
+  }
+
+  ThemeData _buildTheme() {
+    return ThemeData(
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: const Color(0xFF74bfc3),
+        primary: const Color(0xFF74bfc3),
+        secondary: const Color(0xFFc0b5a9),
+        surface: const Color(0xFFfdfeff),
+      ),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Color(0xFF0B212D),
+        foregroundColor: Color(0xFFfdfeff),
+        elevation: 0,
+        titleTextStyle: TextStyle(
+          color: Color(0xFFfdfeff),
+          fontSize: 24,
+          fontWeight: FontWeight.bold,
         ),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF0B212D),
-          foregroundColor: Color(0xFFfdfeff),
-          elevation: 0,
-          titleTextStyle: TextStyle(
-            color: Color(0xFFfdfeff),
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-          ),
-          actionsIconTheme: IconThemeData(color: Color(0xFFfdfeff)),
-        ),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF74bfc3),
-            foregroundColor: const Color(0xFF0b0808),
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20.0),
-            ),
+        actionsIconTheme: IconThemeData(color: Color(0xFFfdfeff)),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF74bfc3),
+          foregroundColor: const Color(0xFF0b0808),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20.0),
           ),
         ),
       ),
-      home: const LoginPage(),
     );
   }
 }

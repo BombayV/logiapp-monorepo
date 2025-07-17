@@ -1,5 +1,6 @@
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter/foundation.dart';
 import 'package:logi_app/auth/auth.dart';
 import 'package:logi_app/config/constants.dart';
 
@@ -9,91 +10,154 @@ class LocationService {
   LocationService._internal();
 
   final AuthService _authService = AuthService(apiUrl: apiBaseUrl);
+  static const String _logPrefix = '[LocationService]';
 
-  /// Solicita permisos de ubicación y envía la ubicación actual
+  // Configuración de ubicación
+  static const LocationSettings _locationSettings = LocationSettings(
+    accuracy: LocationAccuracy.high,
+    distanceFilter: 10, // Mínimo 10 metros de diferencia
+    timeLimit: Duration(seconds: 15),
+  );
+
+  /// Solicitar permisos y enviar ubicación actual
   Future<bool> requestLocationAndSend() async {
     try {
-      // Verificar si el servicio de ubicación está habilitado
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        print('Los servicios de ubicación están deshabilitados.');
+      // Verificar servicios de ubicación
+      if (!await _isLocationServiceEnabled()) {
+        debugPrint('$_logPrefix Servicios de ubicación deshabilitados');
         return false;
       }
 
-      // Verificar permisos
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          print('Los permisos de ubicación fueron denegados.');
-          return false;
-        }
-      }
-
-      if (permission == LocationPermission.deniedForever) {
-        print('Los permisos de ubicación están permanentemente denegados.');
+      // Verificar y solicitar permisos
+      if (!await _checkAndRequestPermissions()) {
+        debugPrint('$_logPrefix Permisos de ubicación denegados');
         return false;
       }
 
-      // Obtener la ubicación actual
-      Position position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-        timeLimit: const Duration(seconds: 10),
-      );
+      // Obtener ubicación actual
+      final position = await _getCurrentPosition();
+      if (position == null) {
+        debugPrint('$_logPrefix No se pudo obtener la ubicación');
+        return false;
+      }
 
-      // Enviar la ubicación al servidor
-      bool success = await _authService.sendLocation(
-        position.latitude, 
-        position.longitude
+      // Enviar ubicación al servidor
+      final success = await _authService.sendLocation(
+        position.latitude,
+        position.longitude,
       );
 
       if (success) {
-        print('Ubicación enviada exitosamente: ${position.latitude}, ${position.longitude}');
+        debugPrint('$_logPrefix Ubicación enviada: ${position.latitude}, ${position.longitude}');
       } else {
-        print('Error al enviar la ubicación al servidor');
+        debugPrint('$_logPrefix Error enviando ubicación al servidor');
       }
 
       return success;
     } catch (e) {
-      print('Error al obtener o enviar la ubicación: $e');
+      debugPrint('$_logPrefix Error: $e');
       return false;
     }
   }
 
-  /// Obtiene la ubicación actual sin enviarla
-  Future<Position?> getCurrentLocation() async {
+  /// Verificar si los servicios de ubicación están habilitados
+  Future<bool> _isLocationServiceEnabled() async {
     try {
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        return null;
-      }
+      return await Geolocator.isLocationServiceEnabled();
+    } catch (e) {
+      debugPrint('$_logPrefix Error verificando servicios: $e');
+      return false;
+    }
+  }
 
+  /// Verificar y solicitar permisos de ubicación
+  Future<bool> _checkAndRequestPermissions() async {
+    try {
+      // Verificar permisos de ubicación con geolocator
       LocationPermission permission = await Geolocator.checkPermission();
+
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          return null;
-        }
       }
 
       if (permission == LocationPermission.deniedForever) {
-        return null;
+        debugPrint('$_logPrefix Permisos permanentemente denegados');
+        return false;
       }
 
+      if (permission == LocationPermission.denied) {
+        debugPrint('$_logPrefix Permisos denegados');
+        return false;
+      }
+
+      // Para Android, verificar permisos adicionales si es necesario
+      if (defaultTargetPlatform == TargetPlatform.android) {
+        return await _checkAndroidPermissions();
+      }
+
+      return true;
+    } catch (e) {
+      debugPrint('$_logPrefix Error verificando permisos: $e');
+      return false;
+    }
+  }
+
+  /// Verificar permisos específicos de Android
+  Future<bool> _checkAndroidPermissions() async {
+    try {
+      final locationPermission = await Permission.location.status;
+
+      if (locationPermission.isDenied) {
+        final result = await Permission.location.request();
+        if (!result.isGranted) {
+          return false;
+        }
+      }
+
+      return true;
+    } catch (e) {
+      debugPrint('$_logPrefix Error verificando permisos Android: $e');
+      return true; // Continuar si hay error con permission_handler
+    }
+  }
+
+  /// Obtener la posición actual del dispositivo
+  Future<Position?> _getCurrentPosition() async {
+    try {
       return await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
-        timeLimit: const Duration(seconds: 10),
+        timeLimit: const Duration(seconds: 15),
       );
     } catch (e) {
-      print('Error al obtener ubicación: $e');
+      debugPrint('$_logPrefix Error obteniendo posición: $e');
       return null;
     }
   }
 
-  /// Verifica si los permisos de ubicación están concedidos
+  /// Verificar si los permisos están concedidos
   Future<bool> hasLocationPermission() async {
-    LocationPermission permission = await Geolocator.checkPermission();
-    return permission == LocationPermission.always || 
-           permission == LocationPermission.whileInUse;
+    try {
+      final permission = await Geolocator.checkPermission();
+      return permission == LocationPermission.whileInUse ||
+             permission == LocationPermission.always;
+    } catch (e) {
+      debugPrint('$_logPrefix Error verificando permisos: $e');
+      return false;
+    }
+  }
+
+  /// Obtener la distancia entre dos puntos
+  double getDistanceBetween(
+    double startLatitude,
+    double startLongitude,
+    double endLatitude,
+    double endLongitude,
+  ) {
+    return Geolocator.distanceBetween(
+      startLatitude,
+      startLongitude,
+      endLatitude,
+      endLongitude,
+    );
   }
 }

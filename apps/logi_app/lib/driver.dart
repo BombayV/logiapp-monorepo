@@ -20,24 +20,27 @@ class DriverPage extends StatefulWidget {
 class _DriverPageState extends State<DriverPage> with WidgetsBindingObserver {
   final SecureStorageService _secureStorage = SecureStorageService();
   late final AuthService _authService;
+
   List<Order> _orders = [];
   bool _isLoading = true;
   Timer? _locationTimer;
+  Timer? _ordersTimer;
 
   static const Duration _locationInterval = Duration(minutes: 5);
+  static const Duration _ordersInterval = Duration(minutes: 1);
 
   @override
   void initState() {
     super.initState();
     _authService = AuthService(apiUrl: apiBaseUrl);
     WidgetsBinding.instance.addObserver(this);
-
     _initialize();
   }
 
   @override
   void dispose() {
     _stopLocationTimer();
+    _stopOrdersTimer();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -50,34 +53,31 @@ class _DriverPageState extends State<DriverPage> with WidgetsBindingObserver {
       case AppLifecycleState.resumed:
         _sendLocationImmediate();
         _startLocationTimer();
+        _startOrdersTimer();
         break;
       case AppLifecycleState.paused:
+      case AppLifecycleState.inactive:
         _stopLocationTimer();
+        _stopOrdersTimer();
         break;
       default:
         break;
     }
   }
 
-  // Inicialización
+  // ========== INICIALIZACIÓN ==========
+
   Future<void> _initialize() async {
-    // Inicializar el servicio de localización en segundo plano
     await BackgroundLocationService.initialize();
-
-    // Iniciar el servicio de localización en segundo plano
     await BackgroundLocationService.startLocationUpdates();
-
-    // Enviar ubicación inmediatamente
     await _sendLocationImmediate();
-
-    // Iniciar timer para cuando la app esté activa (cada 5 minutos)
     _startLocationTimer();
-
-    // Cargar órdenes
+    _startOrdersTimer();
     await _loadOrders();
   }
 
-  // Gestión de localización
+  // ========== GESTIÓN DE UBICACIÓN ==========
+
   void _startLocationTimer() {
     _stopLocationTimer();
     _locationTimer = Timer.periodic(_locationInterval, (_) => _sendLocationPeriodic());
@@ -92,20 +92,52 @@ class _DriverPageState extends State<DriverPage> with WidgetsBindingObserver {
     try {
       await LocationService().requestLocationAndSend();
     } catch (e) {
-      debugPrint('Error al enviar ubicación inmediata: $e');
+      debugPrint('[DriverPage] Error enviando ubicación inmediata: $e');
     }
   }
 
   Future<void> _sendLocationPeriodic() async {
     try {
-      debugPrint('Enviando ubicación periódicamente...');
       await LocationService().requestLocationAndSend();
     } catch (e) {
-      debugPrint('Error al enviar ubicación periódica: $e');
+      debugPrint('[DriverPage] Error enviando ubicación periódica: $e');
     }
   }
 
-  // Gestión de órdenes
+  // ========== GESTIÓN DE ÓRDENES ==========
+
+  void _startOrdersTimer() {
+    _stopOrdersTimer();
+    _ordersTimer = Timer.periodic(_ordersInterval, (_) => _loadOrdersSilently());
+    debugPrint('[DriverPage] Timer de órdenes iniciado - actualización cada minuto');
+  }
+
+  void _stopOrdersTimer() {
+    _ordersTimer?.cancel();
+    _ordersTimer = null;
+    debugPrint('[DriverPage] Timer de órdenes detenido');
+  }
+
+  Future<void> _loadOrdersSilently() async {
+    try {
+      // Cargar órdenes sin mostrar el loading indicator
+      final ordersData = await _authService.getOrdersByDriver();
+      final ordersList = _parseOrdersData(ordersData);
+
+      if (mounted) {
+        setState(() {
+          _orders = ordersList
+              .map((json) => Order.fromJson(json as Map<String, dynamic>))
+              .toList();
+        });
+        debugPrint('[DriverPage] Órdenes actualizadas automáticamente: ${_orders.length} órdenes');
+      }
+    } catch (e) {
+      debugPrint('[DriverPage] Error actualizando órdenes automáticamente: $e');
+      // No mostrar error al usuario para actualizaciones silenciosas
+    }
+  }
+
   Future<void> _loadOrders() async {
     try {
       setState(() => _isLoading = true);
@@ -119,8 +151,9 @@ class _DriverPageState extends State<DriverPage> with WidgetsBindingObserver {
             .toList();
         _isLoading = false;
       });
+      debugPrint('[DriverPage] Órdenes cargadas: ${_orders.length} órdenes');
     } catch (e) {
-      debugPrint('Error al cargar órdenes: $e');
+      debugPrint('[DriverPage] Error cargando órdenes: $e');
       setState(() {
         _orders = [];
         _isLoading = false;
@@ -131,17 +164,15 @@ class _DriverPageState extends State<DriverPage> with WidgetsBindingObserver {
 
   List<dynamic> _parseOrdersData(dynamic ordersData) {
     if (ordersData == null) return [];
-
     if (ordersData is List) return ordersData;
-
     if (ordersData is Map<String, dynamic> && ordersData['orders'] is List) {
       return ordersData['orders'] as List;
     }
-
     return [];
   }
 
-  // Gestión de usuario
+  // ========== GESTIÓN DE USUARIO ==========
+
   Future<String> _getUserFullName() async {
     try {
       final userDataString = await _secureStorage.getUserData();
@@ -152,15 +183,15 @@ class _DriverPageState extends State<DriverPage> with WidgetsBindingObserver {
       final lastName = userData['profile']?['last_name'] ?? '';
       return '$firstName $lastName'.trim();
     } catch (e) {
-      debugPrint('Error al obtener nombre del usuario: $e');
+      debugPrint('[DriverPage] Error obteniendo nombre: $e');
       return '';
     }
   }
 
   Future<void> _handleLogout() async {
     try {
-      // Detener el servicio de localización en segundo plano
       await BackgroundLocationService.stopLocationUpdates();
+      _stopOrdersTimer();
 
       final success = await _authService.logout();
       if (success && mounted) {
@@ -173,14 +204,15 @@ class _DriverPageState extends State<DriverPage> with WidgetsBindingObserver {
         _showErrorSnackBar('Error al cerrar sesión en el servidor');
       }
     } catch (e) {
-      debugPrint('Error en logout: $e');
+      debugPrint('[DriverPage] Error en logout: $e');
       if (mounted) {
         _showErrorSnackBar('Error de conexión al cerrar sesión: $e');
       }
     }
   }
 
-  // Utilidades
+  // ========== UTILIDADES ==========
+
   void _showErrorSnackBar(String message) {
     if (!mounted) return;
 
@@ -206,6 +238,8 @@ class _DriverPageState extends State<DriverPage> with WidgetsBindingObserver {
     return '${date.day}/${date.month}/${date.year} '
            '${date.hour}:${date.minute.toString().padLeft(2, '0')}';
   }
+
+  // ========== CONSTRUCCIÓN DE UI ==========
 
   @override
   Widget build(BuildContext context) {
@@ -266,7 +300,7 @@ class _DriverPageState extends State<DriverPage> with WidgetsBindingObserver {
                 ),
                 const PopupMenuItem<String>(
                   value: 'logout',
-                  child: Row(
+                  child: const Row(
                     children: [
                       Icon(Icons.exit_to_app),
                       SizedBox(width: 8),

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:logi_app/services/location_service.dart';
 import 'package:logi_app/secureStorage/flutter_secure_storage.dart';
 import 'package:logi_app/auth/auth.dart';
@@ -7,29 +8,29 @@ import 'package:logi_app/config/constants.dart';
 class BackgroundLocationService {
   static Timer? _backgroundTimer;
   static const Duration _backgroundInterval = Duration(minutes: 5);
+  static const String _logPrefix = '[BackgroundLocationService]';
 
-  // Inicializar el servicio (sin WorkManager)
+  // Inicializar el servicio
   static Future<void> initialize() async {
-    // No necesita inicialización especial
-    print('Background location service initialized');
+    debugPrint('$_logPrefix Servicio inicializado');
   }
 
   // Iniciar el envío periódico de localización
   static Future<void> startLocationUpdates() async {
-    await stopLocationUpdates(); // Detener cualquier timer existente
+    await stopLocationUpdates();
 
-    _backgroundTimer = Timer.periodic(_backgroundInterval, (timer) async {
+    _backgroundTimer = Timer.periodic(_backgroundInterval, (_) async {
       await _sendLocationIfAuthenticated();
     });
 
-    print('Background location updates started');
+    debugPrint('$_logPrefix Actualizaciones de ubicación iniciadas');
   }
 
   // Detener el envío de localización
   static Future<void> stopLocationUpdates() async {
     _backgroundTimer?.cancel();
     _backgroundTimer = null;
-    print('Background location updates stopped');
+    debugPrint('$_logPrefix Actualizaciones de ubicación detenidas');
   }
 
   // Cancelar todas las tareas
@@ -37,26 +38,24 @@ class BackgroundLocationService {
     await stopLocationUpdates();
   }
 
-  // Verificar si el usuario está autenticado y enviar ubicación
+  // Verificar autenticación y enviar ubicación
   static Future<void> _sendLocationIfAuthenticated() async {
     try {
       final isAuthenticated = await _isUserAuthenticated();
 
       if (!isAuthenticated) {
-        print('Usuario no autenticado, deteniendo background service');
+        debugPrint('$_logPrefix Usuario no autenticado, deteniendo servicio');
         await stopLocationUpdates();
         return;
       }
 
-      // Enviar ubicación solo si está autenticado
       await LocationService().requestLocationAndSend();
-      print('Ubicación enviada desde background service');
+      debugPrint('$_logPrefix Ubicación enviada exitosamente');
     } catch (e) {
-      print('Error en background location service: $e');
+      debugPrint('$_logPrefix Error: $e');
 
-      // Si hay error de autenticación, detener el servicio
-      if (e.toString().contains('auth') || e.toString().contains('token')) {
-        print('Error de autenticación detectado, deteniendo servicio');
+      if (_isAuthenticationError(e)) {
+        debugPrint('$_logPrefix Error de autenticación detectado, deteniendo servicio');
         await stopLocationUpdates();
       }
     }
@@ -69,23 +68,30 @@ class BackgroundLocationService {
       final token = await secureStorage.getToken();
 
       if (token == null || token.isEmpty) {
-        print('No hay token disponible');
+        debugPrint('$_logPrefix No hay token disponible');
         return false;
       }
 
-      // Verificar que el token sea válido
       final authService = AuthService(apiUrl: apiBaseUrl);
       final isValid = await authService.isAuthenticated();
 
       if (!isValid) {
-        print('Token inválido o expirado');
+        debugPrint('$_logPrefix Token inválido o expirado');
         return false;
       }
 
       return true;
     } catch (e) {
-      print('Error verificando autenticación: $e');
+      debugPrint('$_logPrefix Error verificando autenticación: $e');
       return false;
     }
+  }
+
+  // Verificar si es un error de autenticación
+  static bool _isAuthenticationError(dynamic error) {
+    final errorString = error.toString().toLowerCase();
+    return errorString.contains('auth') ||
+        errorString.contains('token') ||
+        errorString.contains('unauthorized');
   }
 }
