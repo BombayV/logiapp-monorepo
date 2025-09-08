@@ -1,4 +1,4 @@
-# ev-logiapp-monorepo
+# logiapp-monorepo
 
 To install dependencies:
 
