@@ -174,7 +174,7 @@
 				use:enhance={() => {
 					return async ({ result, update }) => {
 						if (result.type === 'success') {
-							toast.success('Encuesta creada (ver consola del servidor)');
+							toast.success('Encuesta creada y enviada exitosamente');
 							await update();
 						} else if (result.type === 'failure') {
 							toast.error(String((result.data as any)?.error || 'Error al crear encuesta'));

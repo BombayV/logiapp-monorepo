@@ -12,6 +12,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import type { ActionData, PageData } from './$types';
 	import { LogIn } from '@lucide/svelte';
+	import { enhance } from '$app/forms';
 
 	export let form: ActionData;
 	export let data: PageData;
@@ -31,7 +32,7 @@
 
 <div class="flex items-center justify-center min-h-screen">
 	<Card class="w-full max-w-sm">
-		<form action="?/login" method="post">
+		<form action="?/login" method="post" use:enhance>
 			<CardHeader>
 				<div class="flex items-center gap-3 mb-2">
 					<div class="p-2 bg-primary/10 rounded-lg">

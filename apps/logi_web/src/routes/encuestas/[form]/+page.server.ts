@@ -19,7 +19,6 @@ export const load: PageServerLoad = async (event) => {
 		});
 	}
 
-	console.log(form);
 	if (form.is_finished) {
 		error(404, {
 			message: 'Esta encuesta ya ha sido respondida'

@@ -10,6 +10,7 @@
 	import { toast } from 'svelte-sonner';
 	import type { UserData } from '../../../app';
 	import { LayoutDashboard, Users, Crown } from '@lucide/svelte';
+	import { enhance } from '$app/forms';
 
 	let { data, form }: { data: { user: UserData; users: User[] }; form: ActionData } = $props();
 
@@ -75,7 +76,7 @@
 							>Crear usuario</Dialog.Trigger
 						>
 						<Dialog.Content class="sm:max-w-[425px]">
-							<form method="POST" action="?/create_user" class="space-y-4">
+							<form method="POST" action="?/create_user" class="space-y-4" use:enhance>
 								<Dialog.Header>
 									<Dialog.Title>Crear Usuario</Dialog.Title>
 									<Dialog.Description>

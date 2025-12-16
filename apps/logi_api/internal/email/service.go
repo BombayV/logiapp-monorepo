@@ -25,7 +25,7 @@ func (s *Service) SendSurveyEmail(to []string, surveyLink string) error {
 	`, surveyLink, surveyLink)
 
 	params := &resend.SendEmailRequest{
-		From:    "onboarding@resend.dev",
+		From:    "LogiApp <hello@dannyjacome.online>",
 		To:      to,
 		Subject: "Encuesta de Satisfacción - LogiApp",
 		Html:    htmlContent,

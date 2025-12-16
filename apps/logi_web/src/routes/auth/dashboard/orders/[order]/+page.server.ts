@@ -275,8 +275,6 @@ export const actions: Actions = {
 				return fail(400, { error: result.error });
 			}
 
-			console.log('Created Survey Form:', result.form);
-
 			return {
 				success: true,
 				message: 'Encuesta creada y enviada por correo exitosamente',
