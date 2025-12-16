@@ -40,4 +40,5 @@ type Repository interface {
 	FindOrderFormByOrderID(ctx context.Context, orderID string) (*OrderForm, error)
 	UpdateOrderForm(ctx context.Context, form *OrderForm) error
 	DeleteOrderForm(ctx context.Context, formID string) error
+	GetDriverAverageRating(ctx context.Context, driverID string) (float64, error)
 }

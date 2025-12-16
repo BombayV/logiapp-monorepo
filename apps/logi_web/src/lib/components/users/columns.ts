@@ -11,6 +11,7 @@ export type User = {
 	last_name?: string;
 	role: 'admin' | 'sales' | 'driver';
 	phone_number?: string;
+	score?: number;
 	last_connection?: string;
 	created_at: string;
 	updated_at: string;
@@ -43,6 +44,14 @@ export const columns: ColumnDef<User>[] = [
 	{
 		accessorKey: 'role',
 		header: 'Rol'
+	},
+	{
+		accessorKey: 'score',
+		header: 'Puntaje',
+		cell: ({ getValue }) => {
+			const score = getValue<number>();
+			return score !== undefined && score !== null ? score.toFixed(1) : '-';
+		}
 	},
 	{
 		accessorKey: 'phone_number',

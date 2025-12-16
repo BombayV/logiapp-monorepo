@@ -735,6 +735,13 @@ func (s *Service) UpdateOrderForm(ctx context.Context, formID string, driverRati
 		return nil, fmt.Errorf("failed to update order form: %w", err)
 	}
 
+	// Update driver score if rating is provided
+	if form.DriverID != nil && form.DriverRating != nil {
+		if err := s.updateDriverScore(ctx, *form.DriverID); err != nil {
+			fmt.Printf("failed to update driver score: %v\n", err)
+		}
+	}
+
 	// Invalidate cache
 	s.invalidateOrderCache(ctx, form.OrderID)
 
@@ -772,6 +779,13 @@ func (s *Service) SubmitOrderForm(ctx context.Context, publicID string, driverRa
 		return nil, fmt.Errorf("failed to update order form: %w", err)
 	}
 
+	// Update driver score if rating is provided
+	if form.DriverID != nil && form.DriverRating != nil {
+		if err := s.updateDriverScore(ctx, *form.DriverID); err != nil {
+			fmt.Printf("failed to update driver score: %v\n", err)
+		}
+	}
+
 	// Invalidate cache
 	s.invalidateOrderCache(ctx, form.OrderID)
 
@@ -790,8 +804,37 @@ func (s *Service) DeleteOrderForm(ctx context.Context, formID string) error {
 		return fmt.Errorf("failed to delete order form: %w", err)
 	}
 
+	// Update driver score if it was rated
+	if form.DriverID != nil && form.DriverRating != nil {
+		if err := s.updateDriverScore(ctx, *form.DriverID); err != nil {
+			fmt.Printf("failed to update driver score: %v\n", err)
+		}
+	}
+
 	// Invalidate cache
 	s.invalidateOrderCache(ctx, form.OrderID)
+
+	return nil
+}
+
+// updateDriverScore updates the score of a driver based on their average rating
+func (s *Service) updateDriverScore(ctx context.Context, driverID string) error {
+	avgRating, err := s.repo.GetDriverAverageRating(ctx, driverID)
+	if err != nil {
+		return fmt.Errorf("failed to get driver average rating: %w", err)
+	}
+
+	user, userData, err := s.userRepo.FindByID(ctx, driverID)
+	if err != nil {
+		return fmt.Errorf("failed to find driver: %w", err)
+	}
+
+	userData.Score = &avgRating
+	userData.UpdatedAt = time.Now()
+
+	if err := s.userRepo.Update(ctx, user, userData); err != nil {
+		return fmt.Errorf("failed to update driver score: %w", err)
+	}
 
 	return nil
 }

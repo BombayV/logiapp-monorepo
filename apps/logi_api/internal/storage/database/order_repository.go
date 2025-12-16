@@ -398,3 +398,18 @@ func (r *OrderRepository) DeleteOrderForm(ctx context.Context, formID string) er
 	_, err := r.db.Pool.Exec(ctx, query, formID)
 	return err
 }
+
+// GetDriverAverageRating calculates the average rating for a driver
+func (r *OrderRepository) GetDriverAverageRating(ctx context.Context, driverID string) (float64, error) {
+	query := `
+		SELECT COALESCE(AVG(driver_rating), 0)
+		FROM order_form
+		WHERE driver_id = $1 AND driver_rating IS NOT NULL
+	`
+	var avgRating float64
+	err := r.db.Pool.QueryRow(ctx, query, driverID).Scan(&avgRating)
+	if err != nil {
+		return 0, err
+	}
+	return avgRating, nil
+}

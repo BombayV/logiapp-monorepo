@@ -211,6 +211,7 @@ func (h *UserHandler) GetUsers(c *gin.Context) {
 			userData["first_name"] = userWithData.UserData.FirstName
 			userData["last_name"] = userWithData.UserData.LastName
 			userData["phone_number"] = userWithData.UserData.PhoneNumber
+			userData["score"] = userWithData.UserData.Score
 			userData["last_connection"] = userWithData.UserData.LastConnection
 		}
 
@@ -253,6 +254,7 @@ func (h *UserHandler) GetUserByID(c *gin.Context) {
 			"first_name":      userData.FirstName,
 			"last_name":       userData.LastName,
 			"phone_number":    userData.PhoneNumber,
+			"score":           userData.Score,
 			"last_connection": userData.LastConnection,
 		},
 	})
