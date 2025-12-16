@@ -642,6 +642,9 @@ func (s *Service) CreateOrderForm(ctx context.Context, orderID string, driverID 
 		return nil, fmt.Errorf("failed to save order form: %w", err)
 	}
 
+	// Invalidate cache
+	s.invalidateOrderCache(ctx, orderID)
+
 	// Send email asynchronously
 	go func() {
 		// Create a new context for the background task
@@ -732,6 +735,9 @@ func (s *Service) UpdateOrderForm(ctx context.Context, formID string, driverRati
 		return nil, fmt.Errorf("failed to update order form: %w", err)
 	}
 
+	// Invalidate cache
+	s.invalidateOrderCache(ctx, form.OrderID)
+
 	return form, nil
 }
 
@@ -766,13 +772,16 @@ func (s *Service) SubmitOrderForm(ctx context.Context, publicID string, driverRa
 		return nil, fmt.Errorf("failed to update order form: %w", err)
 	}
 
+	// Invalidate cache
+	s.invalidateOrderCache(ctx, form.OrderID)
+
 	return form, nil
 }
 
 // DeleteOrderForm deletes a satisfaction form
 func (s *Service) DeleteOrderForm(ctx context.Context, formID string) error {
 	// Check if form exists
-	_, err := s.repo.FindOrderFormByID(ctx, formID)
+	form, err := s.repo.FindOrderFormByID(ctx, formID)
 	if err != nil {
 		return fmt.Errorf("order form not found: %w", err)
 	}
@@ -780,6 +789,9 @@ func (s *Service) DeleteOrderForm(ctx context.Context, formID string) error {
 	if err := s.repo.DeleteOrderForm(ctx, formID); err != nil {
 		return fmt.Errorf("failed to delete order form: %w", err)
 	}
+
+	// Invalidate cache
+	s.invalidateOrderCache(ctx, form.OrderID)
 
 	return nil
 }
