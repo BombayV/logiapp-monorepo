@@ -347,8 +347,17 @@ export const getOrderForm = async (event: RequestEvent, orderId: string) => {
 	}
 };
 
-export const createOrderForm = async (event: RequestEvent, orderId: string) => {
+export const createOrderForm = async (
+	event: RequestEvent,
+	orderId: string,
+	driverId?: string | null
+) => {
 	try {
+		const body: { order_id: string; driver_id?: string } = { order_id: orderId };
+		if (driverId) {
+			body.driver_id = driverId;
+		}
+
 		const response = await fetchAuth(
 			`/v1/orders/${orderId}/forms`,
 			{
@@ -356,7 +365,7 @@ export const createOrderForm = async (event: RequestEvent, orderId: string) => {
 				headers: {
 					'Content-Type': 'application/json'
 				},
-				body: JSON.stringify({ order_id: orderId }),
+				body: JSON.stringify(body),
 				credentials: 'include'
 			},
 			event

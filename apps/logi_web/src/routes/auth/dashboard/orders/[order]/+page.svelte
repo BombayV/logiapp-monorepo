@@ -168,27 +168,29 @@
 		</div>
 		<div class="flex items-center gap-2 flex-wrap">
 			<StatusBadge status={order.status} />
-			<form
-				method="POST"
-				action="?/create_survey"
-				use:enhance={() => {
-					return async ({ result, update }) => {
-						if (result.type === 'success') {
-							toast.success('Encuesta creada y enviada exitosamente');
-							await update();
-						} else if (result.type === 'failure') {
-							toast.error(String((result.data as any)?.error || 'Error al crear encuesta'));
-						}
-					};
-				}}
-				class="inline-block"
-			>
-				<Button variant="outline" size="sm" disabled={data.form?.is_finished} type="submit">
-					<Mail class="h-4 w-4 mr-2" />
-					<span class="hidden sm:inline">Enviar encuesta</span>
-					<span class="sm:hidden">Encuesta</span>
-				</Button>
-			</form>
+			{#if order.status === 'completed'}
+				<form
+					method="POST"
+					action="?/create_survey"
+					use:enhance={() => {
+						return async ({ result, update }) => {
+							if (result.type === 'success') {
+								toast.success('Encuesta creada y enviada exitosamente');
+								await update();
+							} else if (result.type === 'failure') {
+								toast.error(String((result.data as any)?.error || 'Error al crear encuesta'));
+							}
+						};
+					}}
+					class="inline-block"
+				>
+					<Button variant="outline" size="sm" disabled={data.form?.is_finished} type="submit">
+						<Mail class="h-4 w-4 mr-2" />
+						<span class="hidden sm:inline">Enviar encuesta</span>
+						<span class="sm:hidden">Encuesta</span>
+					</Button>
+				</form>
+			{/if}
 			<Button variant="outline" size="sm" onclick={editOrder}>
 				<Edit class="h-4 w-4 mr-2" />
 				<span class="hidden sm:inline">Editar</span>

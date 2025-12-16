@@ -12,7 +12,6 @@ export const load: PageServerLoad = async (event) => {
 	}
 
 	const form = await getFormByPublicId(event, formId);
-
 	if (!form) {
 		error(404, {
 			message: 'No se encontro esa encuesta'

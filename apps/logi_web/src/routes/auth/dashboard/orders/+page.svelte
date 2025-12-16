@@ -88,9 +88,9 @@
 									formElement.reset();
 									orderNumberError = ''; // Clear validation error
 									createOrderDialogOpen = false; // Close dialog
-									await update();
+									await update({ reset: false });
 								} else if (result.type === 'failure') {
-									await update();
+									await update({ reset: false });
 								}
 							};
 						}}

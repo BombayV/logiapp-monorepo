@@ -269,7 +269,12 @@ export const actions: Actions = {
 		}
 
 		try {
-			const result = await createOrderForm(event, orderId);
+			const order = (await getOrderById(event, orderId)) as Order;
+			if (!order) {
+				return fail(404, { error: 'Order not found' });
+			}
+
+			const result = await createOrderForm(event, orderId, order.assigned_to);
 
 			if (result.error) {
 				return fail(400, { error: result.error });
