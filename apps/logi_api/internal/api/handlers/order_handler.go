@@ -2,6 +2,7 @@ package handlers
 
 import (
 	ordersCore "bombayv/logiapp-monorepo/logi_api/internal/core/orders"
+	"bombayv/logiapp-monorepo/logi_api/internal/utils"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -23,9 +24,13 @@ func NewOrderHandler(service *ordersCore.Service) *OrderHandler {
 }
 
 type CreateOrderRequest struct {
-	Email       string `json:"email" binding:"required,email"`
-	Address     string `json:"address" binding:"required"`
-	OrderNumber string `json:"order_number" binding:"required,min=1,max=6"`
+	Email            string  `json:"email" binding:"required,email"`
+	OrderName        string  `json:"order_name" binding:"required,min=1"`
+	OrderPhoneNumber string  `json:"order_phone_number" binding:"required"`
+	OrderEmail       *string `json:"order_email" binding:"omitempty,email"`
+	OrderCedula      *string `json:"order_cedula" binding:"omitempty"`
+	Address          string  `json:"address" binding:"required"`
+	OrderNumber      string  `json:"order_number" binding:"required,min=1,max=6"`
 }
 
 type UpdateOrderRequest struct {
@@ -52,6 +57,20 @@ type UpdateOrderItemRequest struct {
 	Quantity    *int    `json:"quantity,omitempty" binding:"omitempty,min=1"`
 }
 
+type CreateOrderFormRequest struct {
+	OrderID        string  `json:"order_id" binding:"required"`
+	DriverID       *string `json:"driver_id" binding:"omitempty"`
+	DriverRating   *int    `json:"driver_rating" binding:"omitempty,min=1,max=5"`
+	CargoCondition *string `json:"cargo_condition" binding:"omitempty"`
+	Comments       *string `json:"comments" binding:"omitempty"`
+}
+
+type UpdateOrderFormRequest struct {
+	DriverRating   *int    `json:"driver_rating" binding:"omitempty,min=1,max=5"`
+	CargoCondition *string `json:"cargo_condition" binding:"omitempty"`
+	Comments       *string `json:"comments" binding:"omitempty"`
+}
+
 // CreateOrder handles the creation of a new order.
 func (h *OrderHandler) CreateOrder(c *gin.Context) {
 	var req CreateOrderRequest
@@ -67,7 +86,26 @@ func (h *OrderHandler) CreateOrder(c *gin.Context) {
 		return
 	}
 
-	order, err := h.service.CreateOrder(c.Request.Context(), req.Email, req.Address, req.OrderNumber)
+	// Validate cedula if present
+	if req.OrderCedula != nil && *req.OrderCedula != "" {
+		if !utils.ValidateEcuadorianCedula(*req.OrderCedula) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid ecuadorian cedula"})
+			return
+		}
+	}
+
+	// Convert optional fields from pointer to string
+	orderEmail := ""
+	if req.OrderEmail != nil {
+		orderEmail = *req.OrderEmail
+	}
+
+	orderCedula := ""
+	if req.OrderCedula != nil {
+		orderCedula = *req.OrderCedula
+	}
+
+	order, err := h.service.CreateOrder(c.Request.Context(), req.Email, req.OrderName, req.OrderPhoneNumber, orderEmail, orderCedula, req.Address, req.OrderNumber)
 	if err != nil {
 		// Check if it's a duplicate order number error
 		if strings.Contains(err.Error(), "duplicate key value violates unique constraint") &&
@@ -459,4 +497,127 @@ func (h *OrderHandler) GetOrdersByUserID(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, orders)
+}
+
+// CreateOrderForm creates a new satisfaction form for an order
+func (h *OrderHandler) CreateOrderForm(c *gin.Context) {
+	var req CreateOrderFormRequest
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	form, err := h.service.CreateOrderForm(c.Request.Context(), req.OrderID, req.DriverID, req.DriverRating, req.CargoCondition, req.Comments)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, form)
+}
+
+// GetOrderForm retrieves a satisfaction form for a specific order
+func (h *OrderHandler) GetOrderForm(c *gin.Context) {
+	orderID := c.Param("id")
+	if orderID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Order ID is required"})
+		return
+	}
+
+	form, err := h.service.GetOrderForm(c.Request.Context(), orderID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Form not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, form)
+}
+
+// GetOrderFormByPublicID retrieves a satisfaction form by its public ID
+func (h *OrderHandler) GetOrderFormByPublicID(c *gin.Context) {
+	publicID := c.Param("public_id")
+	if publicID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Public ID is required"})
+		return
+	}
+
+	form, err := h.service.GetOrderFormByPublicID(c.Request.Context(), publicID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Form not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, form)
+}
+
+// SubmitOrderForm submits a satisfaction form using its public ID
+func (h *OrderHandler) SubmitOrderForm(c *gin.Context) {
+	publicID := c.Param("public_id")
+	if publicID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Public ID is required"})
+		return
+	}
+
+	var req UpdateOrderFormRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	form, err := h.service.SubmitOrderForm(c.Request.Context(), publicID, req.DriverRating, req.CargoCondition, req.Comments)
+	if err != nil {
+		if err.Error() == "form already submitted" {
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+			return
+		}
+		if strings.Contains(err.Error(), "not found") {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Form not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, form)
+}
+
+// UpdateOrderForm updates an existing satisfaction form
+func (h *OrderHandler) UpdateOrderForm(c *gin.Context) {
+	formID := c.Param("form_id")
+	if formID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Form ID is required"})
+		return
+	}
+
+	var req UpdateOrderFormRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	form, err := h.service.UpdateOrderForm(c.Request.Context(), formID, req.DriverRating, req.CargoCondition, req.Comments)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, form)
+}
+
+// DeleteOrderForm deletes a satisfaction form
+func (h *OrderHandler) DeleteOrderForm(c *gin.Context) {
+	formID := c.Param("form_id")
+	if formID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Form ID is required"})
+		return
+	}
+
+	err := h.service.DeleteOrderForm(c.Request.Context(), formID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Form deleted successfully"})
 }

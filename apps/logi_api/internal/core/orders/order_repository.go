@@ -32,4 +32,12 @@ type Repository interface {
 	UpdateOrderItem(ctx context.Context, item *OrderItem) error
 	DeleteOrderItem(ctx context.Context, itemID string) error
 	DeleteOrderItemsByOrderID(ctx context.Context, orderID string) error
+
+	// Order form operations
+	SaveOrderForm(ctx context.Context, form *OrderForm) error
+	FindOrderFormByID(ctx context.Context, formID string) (*OrderForm, error)
+	FindOrderFormByPublicID(ctx context.Context, publicID string) (*OrderForm, error)
+	FindOrderFormByOrderID(ctx context.Context, orderID string) (*OrderForm, error)
+	UpdateOrderForm(ctx context.Context, form *OrderForm) error
+	DeleteOrderForm(ctx context.Context, formID string) error
 }

@@ -17,8 +17,8 @@
 		"cf:tail": "wrangler pages deployment tail"
 	},
 	"devDependencies": {
-		"@internationalized/date": "^3.8.2",
-		"@lucide/svelte": "^0.515.0",
+		"@internationalized/date": "^3.10.0",
+		"@lucide/svelte": "^0.561.0",
 		"@sveltejs/adapter-auto": "^6.0.1",
 		"@sveltejs/adapter-cloudflare": "^7.0.5",
 		"@sveltejs/kit": "^2.24.0",
@@ -26,7 +26,7 @@
 		"@tailwindcss/vite": "^4.1.11",
 		"@tanstack/table-core": "^8.21.3",
 		"@types/leaflet": "^1.9.20",
-		"bits-ui": "^2.8.11",
+		"bits-ui": "^2.14.4",
 		"clsx": "^2.1.1",
 		"mode-watcher": "^1.1.0",
 		"prettier": "^3.6.2",

@@ -446,3 +446,37 @@ func (h *UserHandler) ResetPassword(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "Password reset successfully"})
 }
+
+// CreateTestUser creates a test user with predefined credentials
+func (h *UserHandler) CreateTestUser(c *gin.Context) {
+	email := "admin@gmail.com"
+	password := "adminadmin22"
+	firstName := "Test"
+	lastName := "Admin"
+	phone := "+1234567890"
+	role := "admin"
+
+	newUser, err := h.UserService.CreateUser(
+		c.Request.Context(),
+		email,
+		password,
+		firstName,
+		lastName,
+		phone,
+		role,
+	)
+
+	if err != nil {
+		if err == user.ErrEmailExists {
+			c.JSON(http.StatusConflict, gin.H{"error": "Test user already exists"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{
+		"message": "Test user created successfully",
+		"user":    newUser,
+	})
+}

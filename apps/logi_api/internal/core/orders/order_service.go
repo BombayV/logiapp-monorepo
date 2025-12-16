@@ -1,7 +1,9 @@
 package orders
 
 import (
+	"bombayv/logiapp-monorepo/logi_api/internal/config"
 	"bombayv/logiapp-monorepo/logi_api/internal/core/user"
+	"bombayv/logiapp-monorepo/logi_api/internal/email"
 	"bombayv/logiapp-monorepo/logi_api/internal/storage/cache"
 	"context"
 	"fmt"
@@ -12,18 +14,19 @@ import (
 
 // Service provides order-related operations.
 type Service struct {
-	repo     Repository
-	userRepo user.Repository
-	cache    *cache.Cache
+	repo         Repository
+	userRepo     user.Repository
+	cache        *cache.Cache
+	emailService *email.Service
 }
 
 // NewService creates a new order service.
-func NewService(repo Repository, userRepo user.Repository, cache *cache.Cache) *Service {
-	return &Service{repo: repo, userRepo: userRepo, cache: cache}
+func NewService(repo Repository, userRepo user.Repository, cache *cache.Cache, emailService *email.Service) *Service {
+	return &Service{repo: repo, userRepo: userRepo, cache: cache, emailService: emailService}
 }
 
 // CreateOrder handles the business logic for creating a new order.
-func (s *Service) CreateOrder(ctx context.Context, email, address string, orderNumber string) (*Order, error) {
+func (s *Service) CreateOrder(ctx context.Context, email, orderName, orderPhoneNumber string, orderEmail, orderCedula, address string, orderNumber string) (*Order, error) {
 	orderID := uuid.New().String()
 	now := time.Now()
 
@@ -33,15 +36,30 @@ func (s *Service) CreateOrder(ctx context.Context, email, address string, orderN
 		return nil, fmt.Errorf("user not found: %w", err)
 	}
 
+	// Convert empty strings to nil for optional fields
+	var orderEmailPtr *string
+	if orderEmail != "" {
+		orderEmailPtr = &orderEmail
+	}
+
+	var orderCedulaPtr *string
+	if orderCedula != "" {
+		orderCedulaPtr = &orderCedula
+	}
+
 	order := &Order{
-		OrderID:         orderID,
-		OrderNumber:     orderNumber,
-		CreatedBy:       user.UserID,
-		AssignedTo:      nil,
-		DeliveryAddress: address,
-		Status:          "pending",
-		CreatedAt:       now,
-		UpdatedAt:       now,
+		OrderID:          orderID,
+		OrderNumber:      orderNumber,
+		CreatedBy:        user.UserID,
+		AssignedTo:       nil,
+		OrderName:        orderName,
+		OrderPhoneNumber: orderPhoneNumber,
+		OrderEmail:       orderEmailPtr,
+		OrderCedula:      orderCedulaPtr,
+		DeliveryAddress:  address,
+		Status:           "pending",
+		CreatedAt:        now,
+		UpdatedAt:        now,
 	}
 
 	if err := s.repo.Save(ctx, order); err != nil {
@@ -550,4 +568,185 @@ func (s *Service) invalidateOrderCache(ctx context.Context, orderID string) {
 	if err := s.cache.DeletePattern(ctx, "orders_assigned_to:*"); err != nil {
 		fmt.Printf("Failed to invalidate assigned orders cache: %v\n", err)
 	}
+}
+
+// generatePublicID generates a random 6-character alphanumeric string
+func generatePublicID() string {
+	const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	b := make([]byte, 6)
+	for i := range b {
+		b[i] = charset[time.Now().UnixNano()%int64(len(charset))]
+		time.Sleep(1 * time.Nanosecond) // Ensure different seed for each char if called rapidly
+	}
+	return string(b)
+}
+
+// CreateOrderForm creates a new satisfaction form for an order
+func (s *Service) CreateOrderForm(ctx context.Context, orderID string, driverID *string, driverRating *int, cargoCondition, comments *string) (*OrderForm, error) {
+	formID := uuid.New().String()
+	publicID := generatePublicID()
+	now := time.Now()
+
+	isFinished := false
+	if driverRating != nil {
+		isFinished = true
+	}
+
+	form := &OrderForm{
+		FormID:         formID,
+		PublicID:       publicID,
+		OrderID:        orderID,
+		DriverID:       driverID,
+		DriverRating:   driverRating,
+		CargoCondition: cargoCondition,
+		Comments:       comments,
+		IsFinished:     isFinished,
+		CreatedAt:      now,
+		UpdatedAt:      now,
+	}
+
+	if err := s.repo.SaveOrderForm(ctx, form); err != nil {
+		return nil, fmt.Errorf("failed to save order form: %w", err)
+	}
+
+	// Send email asynchronously
+	go func() {
+		// Create a new context for the background task
+		bgCtx := context.Background()
+
+		order, err := s.repo.FindByID(bgCtx, orderID)
+		if err != nil {
+			fmt.Printf("failed to fetch order for email sending: %v\n", err)
+			return
+		}
+
+		if order.OrderEmail != nil && *order.OrderEmail != "" {
+			baseURL := config.App.WebBaseURL
+			if baseURL == "" {
+				baseURL = "http://localhost:5173"
+			}
+			surveyLink := fmt.Sprintf("%s/encuestas/%s", baseURL, publicID)
+
+			err := s.emailService.SendSurveyEmail([]string{*order.OrderEmail}, surveyLink)
+			if err != nil {
+				fmt.Printf("failed to send survey email: %v\n", err)
+			} else {
+				fmt.Printf("survey email sent to %s\n", *order.OrderEmail)
+			}
+		}
+	}()
+
+	return form, nil
+}
+
+// GetOrderForm retrieves a satisfaction form for a specific order
+func (s *Service) GetOrderForm(ctx context.Context, orderID string) (*OrderForm, error) {
+	form, err := s.repo.FindOrderFormByOrderID(ctx, orderID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find order form: %w", err)
+	}
+
+	return form, nil
+}
+
+// GetOrderFormByPublicID retrieves a satisfaction form by its public ID
+func (s *Service) GetOrderFormByPublicID(ctx context.Context, publicID string) (*OrderForm, error) {
+	form, err := s.repo.FindOrderFormByPublicID(ctx, publicID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find order form: %w", err)
+	}
+
+	// Populate driver info if available
+	if form.DriverID != nil {
+		driver, driverData, err := s.userRepo.FindByID(ctx, *form.DriverID)
+		if err == nil {
+			if driverData != nil {
+				form.DriverName = driverData.FirstName + " " + driverData.LastName
+			}
+			if driver != nil {
+				form.DriverEmail = driver.Email
+			}
+		}
+	}
+
+	return form, nil
+}
+
+// UpdateOrderForm updates an existing satisfaction form
+func (s *Service) UpdateOrderForm(ctx context.Context, formID string, driverRating *int, cargoCondition, comments *string) (*OrderForm, error) {
+	form, err := s.repo.FindOrderFormByID(ctx, formID)
+	if err != nil {
+		return nil, fmt.Errorf("order form not found: %w", err)
+	}
+
+	// Update fields
+	if driverRating != nil {
+		form.DriverRating = driverRating
+		form.IsFinished = true
+	}
+
+	if cargoCondition != nil {
+		form.CargoCondition = cargoCondition
+	}
+
+	if comments != nil {
+		form.Comments = comments
+	}
+
+	form.UpdatedAt = time.Now()
+
+	if err := s.repo.UpdateOrderForm(ctx, form); err != nil {
+		return nil, fmt.Errorf("failed to update order form: %w", err)
+	}
+
+	return form, nil
+}
+
+// SubmitOrderForm submits a satisfaction form using its public ID
+func (s *Service) SubmitOrderForm(ctx context.Context, publicID string, driverRating *int, cargoCondition, comments *string) (*OrderForm, error) {
+	form, err := s.repo.FindOrderFormByPublicID(ctx, publicID)
+	if err != nil {
+		return nil, fmt.Errorf("order form not found: %w", err)
+	}
+
+	if form.IsFinished {
+		return nil, fmt.Errorf("form already submitted")
+	}
+
+	// Update fields
+	if driverRating != nil {
+		form.DriverRating = driverRating
+	}
+
+	if cargoCondition != nil {
+		form.CargoCondition = cargoCondition
+	}
+
+	if comments != nil {
+		form.Comments = comments
+	}
+
+	form.IsFinished = true
+	form.UpdatedAt = time.Now()
+
+	if err := s.repo.UpdateOrderForm(ctx, form); err != nil {
+		return nil, fmt.Errorf("failed to update order form: %w", err)
+	}
+
+	return form, nil
+}
+
+// DeleteOrderForm deletes a satisfaction form
+func (s *Service) DeleteOrderForm(ctx context.Context, formID string) error {
+	// Check if form exists
+	_, err := s.repo.FindOrderFormByID(ctx, formID)
+	if err != nil {
+		return fmt.Errorf("order form not found: %w", err)
+	}
+
+	if err := s.repo.DeleteOrderForm(ctx, formID); err != nil {
+		return fmt.Errorf("failed to delete order form: %w", err)
+	}
+
+	return nil
 }

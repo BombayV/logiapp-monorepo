@@ -7,7 +7,9 @@ import {
 	createOrderItemsBulk,
 	deleteOrder,
 	updateOrder,
-	deleteOrderItem
+	deleteOrderItem,
+	getOrderForm,
+	createOrderForm
 } from '$lib/server/orders';
 import type { Order, OrderItem } from '@/components/orders/columns';
 
@@ -36,10 +38,13 @@ export const load: PageServerLoad = async (event) => {
 			throw error(404, 'Order items not found');
 		}
 
+		const form = await getOrderForm(event, orderId);
+
 		return {
 			user: locals.user,
 			order: order,
-			items: items
+			items: items,
+			form: form
 		};
 	} catch (err) {
 		console.error('Error loading order:', err);
@@ -247,6 +252,38 @@ export const actions: Actions = {
 			return { success: true, message: 'Item eliminado exitosamente' };
 		} catch (error) {
 			console.error('Error deleting item:', error);
+			return fail(500, { error: 'Error interno del servidor' });
+		}
+	},
+
+	create_survey: async (event) => {
+		const { params, locals } = event;
+
+		if (!locals.user) {
+			throw redirect(303, '/auth/login');
+		}
+
+		const orderId = params.order;
+		if (!orderId) {
+			return fail(400, { error: 'Order ID not provided' });
+		}
+
+		try {
+			const result = await createOrderForm(event, orderId);
+
+			if (result.error) {
+				return fail(400, { error: result.error });
+			}
+
+			console.log('Created Survey Form:', result.form);
+
+			return {
+				success: true,
+				message: 'Encuesta creada y enviada por correo exitosamente',
+				form: result.form
+			};
+		} catch (error) {
+			console.error('Error creating survey:', error);
 			return fail(500, { error: 'Error interno del servidor' });
 		}
 	}

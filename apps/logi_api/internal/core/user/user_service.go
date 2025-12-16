@@ -34,8 +34,8 @@ func NewService(repo Repository, cache *cache.Cache) *Service {
 // CreateUser handles the business logic for creating a new user.
 func (s *Service) CreateUser(ctx context.Context, email, password, firstName, lastName, phone, role string) (*User, error) {
 	// 2. Validate role
-	if role != "sales" && role != "driver" {
-		return nil, errors.New("invalid role provided: must be 'sales', or 'driver'")
+	if role != "sales" && role != "driver" && role != "admin" {
+		return nil, errors.New("invalid role provided: must be 'sales', 'driver' or 'admin'")
 	}
 
 	// 3. Validate email and password strength.

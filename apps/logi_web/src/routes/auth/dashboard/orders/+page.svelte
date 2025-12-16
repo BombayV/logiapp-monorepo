@@ -98,6 +98,8 @@
 							const formData = new FormData(e.currentTarget);
 							const orderNumber = formData.get('order_number') as string;
 							const address = formData.get('address') as string;
+							const orderName = formData.get('order_name') as string;
+							const orderPhoneNumber = formData.get('order_phone_number') as string;
 
 							let isValid = true;
 
@@ -107,6 +109,16 @@
 
 							if (!address || address.trim().length === 0) {
 								toast.error('La dirección es requerida');
+								isValid = false;
+							}
+
+							if (!orderName || orderName.trim().length === 0) {
+								toast.error('El nombre del cliente es requerido');
+								isValid = false;
+							}
+
+							if (!orderPhoneNumber || orderPhoneNumber.trim().length === 0) {
+								toast.error('El teléfono del cliente es requerido');
 								isValid = false;
 							}
 
@@ -123,7 +135,7 @@
 						</Dialog.Header>
 						<div class="grid gap-4 py-4">
 							<div class="grid grid-cols-4 items-center gap-4">
-								<Label for="email" class="text-right">Email</Label>
+								<Label for="email" class="text-right">Email (Vendedor)</Label>
 								<Input
 									id="email"
 									name="email"
@@ -132,8 +144,53 @@
 									readonly
 								/>
 							</div>
+
 							<div class="grid grid-cols-4 items-center gap-4">
-								<Label for="address" class="text-right">Dirección</Label>
+								<Label for="order_name" class="text-right">Nombre Cliente *</Label>
+								<Input
+									id="order_name"
+									name="order_name"
+									class="col-span-3"
+									placeholder="Juan Pérez"
+									required
+								/>
+							</div>
+
+							<div class="grid grid-cols-4 items-center gap-4">
+								<Label for="order_phone_number" class="text-right">Teléfono *</Label>
+								<Input
+									id="order_phone_number"
+									name="order_phone_number"
+									class="col-span-3"
+									placeholder="0991234567"
+									required
+								/>
+							</div>
+
+							<div class="grid grid-cols-4 items-center gap-4">
+								<Label for="order_email" class="text-right">Email Cliente</Label>
+								<Input
+									id="order_email"
+									name="order_email"
+									type="email"
+									class="col-span-3"
+									placeholder="cliente@ejemplo.com"
+								/>
+							</div>
+
+							<div class="grid grid-cols-4 items-center gap-4">
+								<Label for="order_cedula" class="text-right">Cédula/RUC</Label>
+								<Input
+									id="order_cedula"
+									name="order_cedula"
+									class="col-span-3"
+									placeholder="1712345678"
+									maxlength={13}
+								/>
+							</div>
+
+							<div class="grid grid-cols-4 items-center gap-4">
+								<Label for="address" class="text-right">Dirección *</Label>
 								<Input
 									id="address"
 									name="address"
@@ -143,7 +200,7 @@
 								/>
 							</div>
 							<div class="grid grid-cols-4 items-center gap-4">
-								<Label for="order_number" class="text-right">Número de orden</Label>
+								<Label for="order_number" class="text-right">Número de orden *</Label>
 								<div class="col-span-3">
 									<Input
 										id="order_number"
