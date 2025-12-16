@@ -583,6 +583,39 @@ func generatePublicID() string {
 
 // CreateOrderForm creates a new satisfaction form for an order
 func (s *Service) CreateOrderForm(ctx context.Context, orderID string, driverID *string, driverRating *int, cargoCondition, comments *string) (*OrderForm, error) {
+	// Check if a form already exists for this order
+	existingForm, err := s.repo.FindOrderFormByOrderID(ctx, orderID)
+	if err == nil && existingForm != nil {
+		// If we are just requesting to send the survey (no rating provided) and an unfinished form exists, reuse it
+		if driverRating == nil && !existingForm.IsFinished {
+			// Resend email asynchronously
+			go func() {
+				bgCtx := context.Background()
+				order, err := s.repo.FindByID(bgCtx, orderID)
+				if err != nil {
+					fmt.Printf("failed to fetch order for email sending: %v\n", err)
+					return
+				}
+
+				if order.OrderEmail != nil && *order.OrderEmail != "" {
+					baseURL := config.App.WebBaseURL
+					if baseURL == "" {
+						baseURL = "http://localhost:5173"
+					}
+					surveyLink := fmt.Sprintf("%s/encuestas/%s", baseURL, existingForm.PublicID)
+
+					err := s.emailService.SendSurveyEmail([]string{*order.OrderEmail}, surveyLink)
+					if err != nil {
+						fmt.Printf("failed to send survey email: %v\n", err)
+					} else {
+						fmt.Printf("survey email sent to %s\n", *order.OrderEmail)
+					}
+				}
+			}()
+			return existingForm, nil
+		}
+	}
+
 	formID := uuid.New().String()
 	publicID := generatePublicID()
 	now := time.Now()

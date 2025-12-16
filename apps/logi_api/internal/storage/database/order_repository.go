@@ -368,6 +368,7 @@ func (r *OrderRepository) FindOrderFormByOrderID(ctx context.Context, orderID st
 		SELECT form_id, public_id, order_id, driver_id, driver_rating, cargo_condition, comments, is_finished, created_at, updated_at
 		FROM order_form
 		WHERE order_id = $1
+		ORDER BY created_at DESC
 		LIMIT 1
 	`
 	var form orders.OrderForm

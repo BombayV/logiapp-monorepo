@@ -100,7 +100,25 @@ const update_order = async (event: RequestEvent) => {
 	return { success: true, message: 'Orden actualizada exitosamente' };
 };
 
+const cancel_order = async (event: RequestEvent) => {
+	const formData = await event.request.formData();
+	const orderId = formData.get('order_id') as string;
+
+	if (!orderId) {
+		return fail(400, { error: 'ID de orden requerido' });
+	}
+
+	const result = await updateOrder(event, orderId, { status: 'cancelled' });
+
+	if (result.error) {
+		return fail(500, { error: result.error });
+	}
+
+	return { success: true, message: 'Orden cancelada exitosamente' };
+};
+
 export const actions: Actions = {
 	create_order,
-	update_order
+	update_order,
+	cancel_order
 };

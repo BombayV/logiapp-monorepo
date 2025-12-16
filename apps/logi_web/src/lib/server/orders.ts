@@ -10,6 +10,7 @@ export const getAllOrders = async (event: RequestEvent) => {
 				headers: {
 					'Content-Type': 'application/json'
 				},
+				cache: 'no-store',
 				credentials: 'include' // Ensure cookies are sent with the request
 			},
 			event
@@ -38,6 +39,7 @@ export const getOrderById = async (event: RequestEvent, orderId: string) => {
 				headers: {
 					'Content-Type': 'application/json'
 				},
+				cache: 'no-store',
 				credentials: 'include'
 			},
 			event
@@ -66,6 +68,7 @@ export const getOrderItems = async (event: RequestEvent, orderId: string) => {
 				headers: {
 					'Content-Type': 'application/json'
 				},
+				cache: 'no-store',
 				credentials: 'include'
 			},
 			event
@@ -330,6 +333,7 @@ export const getOrderForm = async (event: RequestEvent, orderId: string) => {
 				headers: {
 					'Content-Type': 'application/json'
 				},
+				cache: 'no-store',
 				credentials: 'include'
 			},
 			event

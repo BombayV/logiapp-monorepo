@@ -85,7 +85,7 @@
 <form
 	id={`cancel-order-form-${id}`}
 	method="POST"
-	action={`?/cancel_order`}
+	action={`/auth/dashboard/orders?/cancel_order`}
 	use:enhance={({ formElement }) => {
 		return async ({ result, update }) => {
 			if (result.type === 'success') {
