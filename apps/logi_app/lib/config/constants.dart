@@ -1,1 +1,1 @@
-const String apiBaseUrl = 'https://spatial-rosmunda-bombay-e0c7d398.koyeb.app';
+const String apiBaseUrl = 'http://spatial-rosmunda-bombay-e0c7d398.koyeb.app';

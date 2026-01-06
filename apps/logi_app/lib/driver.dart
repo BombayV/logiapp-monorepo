@@ -9,6 +9,7 @@ import 'package:logi_app/secureStorage/flutter_secure_storage.dart';
 import 'package:logi_app/services/location_service.dart';
 import 'package:logi_app/services/background_location_service.dart';
 import 'package:logi_app/models/order.dart';
+import 'package:logi_app/services/local_notifications.dart';
 
 class DriverPage extends StatefulWidget {
   const DriverPage({super.key});
@@ -70,6 +71,7 @@ class _DriverPageState extends State<DriverPage> with WidgetsBindingObserver {
   Future<void> _initialize() async {
     await BackgroundLocationService.initialize();
     await BackgroundLocationService.startLocationUpdates();
+    await LocalNotificationsService().initialize();
     await _sendLocationImmediate();
     _startLocationTimer();
     _startOrdersTimer();
@@ -124,11 +126,17 @@ class _DriverPageState extends State<DriverPage> with WidgetsBindingObserver {
       final ordersData = await _authService.getOrdersByDriver();
       final ordersList = _parseOrdersData(ordersData);
 
+      // Parse nuevos datos
+      final newOrders = ordersList
+          .map((json) => Order.fromJson(json as Map<String, dynamic>))
+          .toList();
+
+      // Detectar cambios entre _orders y newOrders
+      _detectOrderChanges(oldOrders: _orders, newOrders: newOrders, silent: true);
+
       if (mounted) {
         setState(() {
-          _orders = ordersList
-              .map((json) => Order.fromJson(json as Map<String, dynamic>))
-              .toList();
+          _orders = newOrders;
         });
         debugPrint('[DriverPage] Órdenes actualizadas automáticamente: ${_orders.length} órdenes');
       }
@@ -145,10 +153,16 @@ class _DriverPageState extends State<DriverPage> with WidgetsBindingObserver {
       final ordersData = await _authService.getOrdersByDriver();
       final ordersList = _parseOrdersData(ordersData);
 
+      // Parse nuevos datos
+      final newOrders = ordersList
+          .map((json) => Order.fromJson(json as Map<String, dynamic>))
+          .toList();
+
+      // Detectar cambios y notificar (no silencioso)
+      _detectOrderChanges(oldOrders: _orders, newOrders: newOrders, silent: false);
+
       setState(() {
-        _orders = ordersList
-            .map((json) => Order.fromJson(json as Map<String, dynamic>))
-            .toList();
+        _orders = newOrders;
         _isLoading = false;
       });
       debugPrint('[DriverPage] Órdenes cargadas: ${_orders.length} órdenes');
@@ -223,6 +237,78 @@ class _DriverPageState extends State<DriverPage> with WidgetsBindingObserver {
         duration: const Duration(seconds: 4),
       ),
     );
+  }
+
+  void _showInfoSnackBar(String message) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.blueAccent,
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
+  /// Detecta cambios entre listas de órdenes y muestra notificaciones
+  void _detectOrderChanges({
+    required List<Order> oldOrders,
+    required List<Order> newOrders,
+    required bool silent,
+  }) {
+    try {
+      // Índices por ID para comparación rápida
+      final oldById = {for (final o in oldOrders) o.orderId: o};
+      final newById = {for (final n in newOrders) n.orderId: n};
+
+      // Nuevas órdenes asignadas
+      final newlyAssigned = newOrders
+          .where((n) => !oldById.containsKey(n.orderId))
+          .toList();
+
+      // Órdenes removidas (ya no asignadas)
+      final removed = oldOrders
+          .where((o) => !newById.containsKey(o.orderId))
+          .toList();
+
+      // Cambios de estado en órdenes existentes
+      final statusChanged = <Order>[];
+      for (final n in newOrders) {
+        final prev = oldById[n.orderId];
+        if (prev != null && prev.status != n.status) {
+          statusChanged.add(n);
+        }
+      }
+
+      // Construir mensajes
+      final messages = <String>[];
+      if (newlyAssigned.isNotEmpty) {
+        messages.add('Nueva(s) orden(es) asignada(s): ${newlyAssigned.length}');
+      }
+      if (statusChanged.isNotEmpty) {
+        messages.add('Orden(es) con cambio de estado: ${statusChanged.length}');
+      }
+      if (removed.isNotEmpty) {
+        messages.add('Orden(es) removida(s): ${removed.length}');
+      }
+
+      if (messages.isEmpty) return; // No hay cambios
+
+      // Notificación en UI (SnackBar); si es silencioso, evitar ruido excesivo
+      final message = messages.join(' • ');
+      debugPrint('[DriverPage] Cambios detectados: $message');
+      if (!silent) {
+        _showInfoSnackBar(message);
+      }
+
+      // Notificación del sistema para nuevas órdenes
+      if (newlyAssigned.isNotEmpty) {
+        LocalNotificationsService().showNewOrders(newlyAssigned.length);
+      }
+    } catch (e) {
+      debugPrint('[DriverPage] Error detectando cambios en órdenes: $e');
+    }
   }
 
   void _navigateToOrderDetails(Order order) {
