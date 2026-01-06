@@ -6,6 +6,7 @@ import (
 	"bombayv/logiapp-monorepo/logi_api/internal/config"
 	"bombayv/logiapp-monorepo/logi_api/internal/core/orders"
 	"bombayv/logiapp-monorepo/logi_api/internal/core/user"
+	"bombayv/logiapp-monorepo/logi_api/internal/email"
 	"bombayv/logiapp-monorepo/logi_api/internal/storage/cache"
 	"bombayv/logiapp-monorepo/logi_api/internal/storage/database"
 	"bombayv/logiapp-monorepo/logi_api/internal/storage/repository"
@@ -36,9 +37,12 @@ func main() {
 	// Initialize repositories
 	repoManager := repository.NewManager(db)
 
+	// Initialize email service
+	emailService := email.NewService(config.App.ResendAPIKey)
+
 	// Initialize services
 	userService := user.NewService(repoManager.User, redisCache)
-	orderService := orders.NewService(repoManager.Orders, repoManager.User, redisCache)
+	orderService := orders.NewService(repoManager.Orders, repoManager.User, redisCache, emailService)
 
 	// Initialize handlers
 	userHandler := handlers.NewUserHandler(userService)

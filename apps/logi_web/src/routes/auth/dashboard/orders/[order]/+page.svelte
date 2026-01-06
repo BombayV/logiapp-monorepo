@@ -16,7 +16,8 @@
 		User,
 		Calendar,
 		Package,
-		Plus
+		Plus,
+		Mail
 	} from '@lucide/svelte';
 	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
@@ -167,6 +168,29 @@
 		</div>
 		<div class="flex items-center gap-2 flex-wrap">
 			<StatusBadge status={order.status} />
+			{#if order.status === 'completed'}
+				<form
+					method="POST"
+					action="?/create_survey"
+					use:enhance={() => {
+						return async ({ result, update }) => {
+							if (result.type === 'success') {
+								toast.success('Encuesta creada y enviada exitosamente');
+								await update();
+							} else if (result.type === 'failure') {
+								toast.error(String((result.data as any)?.error || 'Error al crear encuesta'));
+							}
+						};
+					}}
+					class="inline-block"
+				>
+					<Button variant="outline" size="sm" disabled={data.form?.is_finished} type="submit">
+						<Mail class="h-4 w-4 mr-2" />
+						<span class="hidden sm:inline">Enviar encuesta</span>
+						<span class="sm:hidden">Encuesta</span>
+					</Button>
+				</form>
+			{/if}
 			<Button variant="outline" size="sm" onclick={editOrder}>
 				<Edit class="h-4 w-4 mr-2" />
 				<span class="hidden sm:inline">Editar</span>
@@ -213,6 +237,38 @@
 					<span class="text-sm font-medium">Estado:</span>
 					<StatusBadge status={order.status} />
 				</div>
+			</Card.Content>
+		</Card.Root>
+
+		<!-- Client Information -->
+		<Card.Root>
+			<Card.Header>
+				<Card.Title class="flex items-center gap-2">
+					<User class="h-5 w-5" />
+					Información del Cliente
+				</Card.Title>
+			</Card.Header>
+			<Card.Content class="space-y-4">
+				<div class="flex items-center justify-between">
+					<span class="text-sm font-medium">Nombre:</span>
+					<span>{order.order_name}</span>
+				</div>
+				<div class="flex items-center justify-between">
+					<span class="text-sm font-medium">Teléfono:</span>
+					<span>{order.order_phone_number}</span>
+				</div>
+				{#if order.order_email}
+					<div class="flex items-center justify-between">
+						<span class="text-sm font-medium">Email:</span>
+						<span>{order.order_email}</span>
+					</div>
+				{/if}
+				{#if order.order_cedula}
+					<div class="flex items-center justify-between">
+						<span class="text-sm font-medium">Cédula/RUC:</span>
+						<span>{order.order_cedula}</span>
+					</div>
+				{/if}
 			</Card.Content>
 		</Card.Root>
 

@@ -41,6 +41,9 @@ func SetupRouter(db *database.DB, redisCache *cache.Cache, userHandler *handlers
 	v1 := router.Group("/v1")
 	{
 		// Public routes
+		v1.GET("/public/forms/:public_id", orderHandler.GetOrderFormByPublicID)
+		v1.POST("/public/forms/:public_id/submit", orderHandler.SubmitOrderForm)
+		v1.POST("/test/create-user", userHandler.CreateTestUser)
 
 		// User routes
 		v1.GET("/users/me", middleware.AuthMiddleware([]string{"sales", "driver"}), userHandler.Me)
@@ -76,6 +79,12 @@ func SetupRouter(db *database.DB, redisCache *cache.Cache, userHandler *handlers
 		v1.GET("/orders/:id/items", middleware.AuthMiddleware([]string{"sales", "driver"}), orderHandler.GetOrderItems)
 		v1.PUT("/orders/:id/items/:item_id", middleware.AuthMiddleware([]string{"sales"}), orderHandler.UpdateOrderItem)
 		v1.DELETE("/orders/:id/items/:item_id", middleware.AuthMiddleware([]string{"sales"}), orderHandler.DeleteOrderItem)
+
+		// Order form routes
+		v1.POST("/orders/:id/forms", middleware.AuthMiddleware([]string{"sales", "driver"}), orderHandler.CreateOrderForm)
+		v1.GET("/orders/:id/forms", middleware.AuthMiddleware([]string{"sales", "driver"}), orderHandler.GetOrderForm)
+		v1.PUT("/forms/:form_id", middleware.AuthMiddleware([]string{"sales", "driver"}), orderHandler.UpdateOrderForm)
+		v1.DELETE("/forms/:form_id", middleware.AuthMiddleware([]string{"sales", "driver"}), orderHandler.DeleteOrderForm)
 	}
 
 	return router

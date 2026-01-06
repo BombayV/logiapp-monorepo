@@ -13,6 +13,10 @@ export type Order = {
 	created_by_username?: string;
 	assigned_to: string;
 	assigned_to_username?: string;
+	order_name: string;
+	order_phone_number: string;
+	order_email?: string;
+	order_cedula?: string;
 	delivery_address: string;
 	status: Status;
 	created_at: string;

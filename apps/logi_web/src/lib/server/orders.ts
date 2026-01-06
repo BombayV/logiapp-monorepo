@@ -10,6 +10,7 @@ export const getAllOrders = async (event: RequestEvent) => {
 				headers: {
 					'Content-Type': 'application/json'
 				},
+				cache: 'no-store',
 				credentials: 'include' // Ensure cookies are sent with the request
 			},
 			event
@@ -38,6 +39,7 @@ export const getOrderById = async (event: RequestEvent, orderId: string) => {
 				headers: {
 					'Content-Type': 'application/json'
 				},
+				cache: 'no-store',
 				credentials: 'include'
 			},
 			event
@@ -66,6 +68,7 @@ export const getOrderItems = async (event: RequestEvent, orderId: string) => {
 				headers: {
 					'Content-Type': 'application/json'
 				},
+				cache: 'no-store',
 				credentials: 'include'
 			},
 			event
@@ -159,7 +162,15 @@ export const createOrderItemsBulk = async (
 
 export const createOrder = async (
 	event: RequestEvent,
-	orderData: { email: string; address: string; order_number: string }
+	orderData: {
+		email: string;
+		address: string;
+		order_number: string;
+		order_name: string;
+		order_phone_number: string;
+		order_email?: string;
+		order_cedula?: string;
+	}
 ) => {
 	console.log('Creating order with data:', orderData);
 
@@ -177,6 +188,14 @@ export const createOrder = async (
 	if (!/^[0-9]+$/.test(orderData.order_number)) {
 		console.log('Validation error: Order number must be numeric');
 		return { error: 'El número de orden solo puede contener dígitos' };
+	}
+
+	if (!orderData.order_name) {
+		return { error: 'El nombre del cliente es requerido' };
+	}
+
+	if (!orderData.order_phone_number) {
+		return { error: 'El teléfono del cliente es requerido' };
 	}
 
 	try {
@@ -302,5 +321,72 @@ export const deleteOrderItem = async (event: RequestEvent, orderId: string, item
 	} catch (error) {
 		console.error('Error deleting order item:', error);
 		return { error: 'Error de conexión al eliminar el item' };
+	}
+};
+
+export const getOrderForm = async (event: RequestEvent, orderId: string) => {
+	try {
+		const response = await fetchAuth(
+			`/v1/orders/${orderId}/forms`,
+			{
+				method: 'GET',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				cache: 'no-store',
+				credentials: 'include'
+			},
+			event
+		);
+
+		if (!response.ok) {
+			return null;
+		}
+
+		const form = await response.json();
+		return form;
+	} catch (error) {
+		console.error('Error fetching order form:', error);
+		return null;
+	}
+};
+
+export const createOrderForm = async (
+	event: RequestEvent,
+	orderId: string,
+	driverId?: string | null
+) => {
+	try {
+		const body: { order_id: string; driver_id?: string } = { order_id: orderId };
+		if (driverId) {
+			body.driver_id = driverId;
+		}
+
+		const response = await fetchAuth(
+			`/v1/orders/${orderId}/forms`,
+			{
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify(body),
+				credentials: 'include'
+			},
+			event
+		);
+
+		if (!response.ok) {
+			const errorData = await response
+				.json()
+				.catch(() => ({ error: 'Failed to create order form.' }));
+			console.log('Error creating order form:', errorData);
+			return { error: errorData.error || 'Error al crear la encuesta' };
+		}
+
+		const form = await response.json();
+		return { success: true, form };
+	} catch (error) {
+		console.error('Error creating order form:', error);
+		return { error: 'Error de conexión al crear la encuesta' };
 	}
 };

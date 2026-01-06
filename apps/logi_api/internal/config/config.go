@@ -16,6 +16,8 @@ type Config struct {
 	GinMode      string
 	TrustedProxy string
 	JWTSecret    string
+	WebBaseURL   string
+	ResendAPIKey string
 }
 
 // AppConfig LoadConfig reads configuration from environment variables.
@@ -40,6 +42,8 @@ func LoadConfig() (err error) {
 		GinMode:      os.Getenv("GIN_MODE"),
 		TrustedProxy: os.Getenv("TRUSTED_PROXY"),
 		JWTSecret:    os.Getenv("JWT_SECRET"),
+		WebBaseURL:   os.Getenv("WEB_BASE_URL"),
+		ResendAPIKey: os.Getenv("RESEND_API_KEY"),
 	}
 	return nil
 }

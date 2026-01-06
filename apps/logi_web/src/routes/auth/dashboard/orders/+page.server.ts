@@ -35,12 +35,22 @@ const create_order = async (event: RequestEvent) => {
 	const orderDetails = {
 		email: formData.get('email') as string,
 		address: formData.get('address') as string,
-		order_number: formData.get('order_number') as string
+		order_number: formData.get('order_number') as string,
+		order_name: formData.get('order_name') as string,
+		order_phone_number: formData.get('order_phone_number') as string,
+		order_email: (formData.get('order_email') as string) || undefined,
+		order_cedula: (formData.get('order_cedula') as string) || undefined
 	};
 
 	// Validate required fields
-	if (!orderDetails.email || !orderDetails.address || !orderDetails.order_number) {
-		return fail(400, { error: 'Todos los campos son requeridos' });
+	if (
+		!orderDetails.email ||
+		!orderDetails.address ||
+		!orderDetails.order_number ||
+		!orderDetails.order_name ||
+		!orderDetails.order_phone_number
+	) {
+		return fail(400, { error: 'Todos los campos obligatorios son requeridos' });
 	}
 
 	// Validate email format
@@ -90,7 +100,25 @@ const update_order = async (event: RequestEvent) => {
 	return { success: true, message: 'Orden actualizada exitosamente' };
 };
 
+const cancel_order = async (event: RequestEvent) => {
+	const formData = await event.request.formData();
+	const orderId = formData.get('order_id') as string;
+
+	if (!orderId) {
+		return fail(400, { error: 'ID de orden requerido' });
+	}
+
+	const result = await updateOrder(event, orderId, { status: 'cancelled' });
+
+	if (result.error) {
+		return fail(500, { error: result.error });
+	}
+
+	return { success: true, message: 'Orden cancelada exitosamente' };
+};
+
 export const actions: Actions = {
 	create_order,
-	update_order
+	update_order,
+	cancel_order
 };

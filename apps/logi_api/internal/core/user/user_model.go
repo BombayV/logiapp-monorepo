@@ -17,6 +17,7 @@ type UserData struct {
 	FirstName      string    `json:"first_name" gorm:"type:varchar(100);not null"`
 	LastName       string    `json:"last_name" gorm:"type:varchar(100);not null"`
 	PhoneNumber    string    `json:"phone_number" gorm:"type:varchar(16);unique;not null;"`
+	Score          *float64  `json:"score" gorm:"type:float;default:0"`
 	LastConnection time.Time `json:"last_connection" gorm:"type:timestamp with time zone;default:current_timestamp"`
 	CreatedAt      time.Time `json:"created_at" gorm:"type:timestamp with time zone;default:current_timestamp"`
 	UpdatedAt      time.Time `json:"updated_at" gorm:"type:timestamp with time zone;default:current_timestamp"`

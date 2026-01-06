@@ -36,10 +36,10 @@ func (r *UserRepository) Save(ctx context.Context, u *user.User, ud *user.UserDa
 		}
 
 		userDataQuery := `
-			INSERT INTO users_data (user_id, first_name, last_name, phone_number, last_connection, created_at, updated_at)
-			VALUES ($1, $2, $3, $4, $5, $6, $7)
+			INSERT INTO users_data (user_id, first_name, last_name, phone_number, last_connection, score, created_at, updated_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		`
-		_, err = tx.Exec(ctx, userDataQuery, ud.UserID, ud.FirstName, ud.LastName, ud.PhoneNumber, ud.LastConnection, ud.CreatedAt, ud.UpdatedAt)
+		_, err = tx.Exec(ctx, userDataQuery, ud.UserID, ud.FirstName, ud.LastName, ud.PhoneNumber, ud.LastConnection, ud.Score, ud.CreatedAt, ud.UpdatedAt)
 		if err != nil {
 			return fmt.Errorf("failed to save user data: %w", err)
 		}
@@ -121,10 +121,10 @@ func (r *UserRepository) Update(ctx context.Context, u *user.User, ud *user.User
 		// Update user data
 		userDataQuery := `
 			UPDATE users_data 
-			SET first_name = $2, last_name = $3, phone_number = $4, last_connection = $5, updated_at = $6
+			SET first_name = $2, last_name = $3, phone_number = $4, last_connection = $5, score = $6, updated_at = $7
 			WHERE user_id = $1
 		`
-		_, err = tx.Exec(ctx, userDataQuery, ud.UserID, ud.FirstName, ud.LastName, ud.PhoneNumber, ud.LastConnection, ud.UpdatedAt)
+		_, err = tx.Exec(ctx, userDataQuery, ud.UserID, ud.FirstName, ud.LastName, ud.PhoneNumber, ud.LastConnection, ud.Score, ud.UpdatedAt)
 		if err != nil {
 			return fmt.Errorf("failed to update user data: %w", err)
 		}
